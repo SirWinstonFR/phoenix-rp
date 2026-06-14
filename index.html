@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Téléphone RP</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/2.44.0/tabler-icons.min.css">
+</head>
+<body>
+
+<div class="phone">
+
+  <div class="status-bar">
+    <span id="clock">21:42</span>
+    <div class="status-icons">
+      <i class="ti ti-wifi"></i>
+      <i class="ti ti-battery-3"></i>
+    </div>
+  </div>
+
+  <div class="lockscreen">
+    <p class="big-time" id="big-clock">21:42</p>
+    <p class="date-line">Dimanche 14 Juin · Île de Valoria</p>
+  </div>
+
+  <div class="app-grid">
+
+    <div class="app-icon" onclick="openApp('messages')">
+      <div class="icon-bg c-info">
+        <i class="ti ti-message-circle-2"></i>
+        <span class="badge">3</span>
+      </div>
+      <span class="app-label">Messages</span>
+    </div>
+
+    <div class="app-icon" onclick="openApp('phone')">
+      <div class="icon-bg c-success">
+        <i class="ti ti-phone"></i>
+      </div>
+      <span class="app-label">Téléphone</span>
+    </div>
+
+    <div class="app-icon" onclick="openApp('instagrim')">
+      <div class="icon-bg c-default">
+        <i class="ti ti-photo"></i>
+        <span class="badge">1</span>
+      </div>
+      <span class="app-label">Instagrim</span>
+    </div>
+
+    <div class="app-icon" onclick="openApp('notes')">
+      <div class="icon-bg c-default">
+        <i class="ti ti-notes"></i>
+      </div>
+      <span class="app-label">Notes</span>
+    </div>
+
+    <div class="app-icon" onclick="openApp('camera')">
+      <div class="icon-bg c-default">
+        <i class="ti ti-camera"></i>
+      </div>
+      <span class="app-label">Appareil photo</span>
+    </div>
+
+    <div class="app-icon" onclick="openApp('settings')">
+      <div class="icon-bg c-default">
+        <i class="ti ti-settings"></i>
+      </div>
+      <span class="app-label">Réglages</span>
+    </div>
+
+    <div class="app-icon locked">
+      <div class="icon-bg c-locked">
+        <i class="ti ti-lock"></i>
+      </div>
+      <span class="app-label">Verrouillée</span>
+    </div>
+
+    <div class="app-icon locked">
+      <div class="icon-bg c-locked">
+        <i class="ti ti-lock"></i>
+      </div>
+      <span class="app-label">Verrouillée</span>
+    </div>
+
+  </div>
+
+  <div class="home-indicator"></div>
+
+</div>
+
+<!-- Écran Instagrim, caché au départ -->
+<div class="phone app-screen" id="screen-instagrim" style="display:none;">
+
+  <div class="status-bar">
+    <span class="clock-mini">21:42</span>
+    <div class="status-icons">
+      <i class="ti ti-wifi"></i>
+      <i class="ti ti-battery-3"></i>
+    </div>
+  </div>
+
+  <div class="app-header">
+    <i class="ti ti-arrow-left" onclick="closeApp()"></i>
+    <span class="app-title">instagrim</span>
+    <i class="ti ti-send"></i>
+  </div>
+
+  <div class="feed" id="feed">
+    <!-- Les posts sont générés par script.js -->
+  </div>
+
+  <div class="bottom-nav">
+    <i class="ti ti-home"></i>
+    <i class="ti ti-search"></i>
+    <i class="ti ti-square-plus"></i>
+    <i class="ti ti-heart"></i>
+    <div class="avatar-dot"></div>
+  </div>
+
+</div>
+
+<script src="posts.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
