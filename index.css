@@ -1,0 +1,431 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #111;
+  font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  color: #1a1a1a;
+}
+
+/* ── Téléphone ── */
+.phone {
+  width: 320px;
+  height: 640px;
+  background: #f5f4f0;
+  border-radius: 36px;
+  border: 1px solid #333;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* ── Barre de statut ── */
+.status-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 18px 0;
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.status-icons {
+  display: flex;
+  gap: 5px;
+  font-size: 13px;
+}
+
+/* ── Écrans (transition slide) ── */
+.screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: slideIn 0.25s ease;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
+/* ── Accueil ── */
+.home-time {
+  text-align: center;
+  padding: 16px 0 4px;
+}
+
+.home-time .big-clock {
+  font-size: 48px;
+  font-weight: 300;
+  letter-spacing: -2px;
+}
+
+.home-time .date {
+  font-size: 13px;
+  color: #888;
+  margin-top: 2px;
+}
+
+.app-grid {
+  flex: 1;
+  padding: 20px 22px 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px 10px;
+  align-content: start;
+}
+
+.app-icon-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+}
+
+.app-icon-wrap.locked {
+  opacity: 0.35;
+  cursor: default;
+  pointer-events: none;
+}
+
+.app-icon-box {
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  position: relative;
+}
+
+.app-label {
+  font-size: 10px;
+  color: #444;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.app-badge {
+  position: absolute;
+  top: -4px; right: -4px;
+  background: #e03e3e;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  border-radius: 50%;
+  width: 16px; height: 16px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.home-bar {
+  display: flex;
+  justify-content: center;
+  padding: 14px 0 10px;
+  flex-shrink: 0;
+}
+
+.home-indicator {
+  width: 100px;
+  height: 4px;
+  background: #ccc;
+  border-radius: 2px;
+}
+
+/* ── En-tête d'appli ── */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  border-bottom: 1px solid #e4e2dc;
+  flex-shrink: 0;
+}
+
+.app-header-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 20px;
+  color: #333;
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  border-radius: 8px;
+}
+
+.icon-btn:hover { background: #e8e6e0; }
+
+/* ── Fil Instagrim ── */
+.feed {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.post {
+  border-bottom: 1px solid #e4e2dc;
+  padding-bottom: 10px;
+  margin-bottom: 2px;
+}
+
+.post-header {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 14px;
+}
+
+.post-avatar {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.post-meta { flex: 1; }
+.post-username { font-size: 13px; font-weight: 600; }
+.post-location { font-size: 11px; color: #999; }
+
+.post-img {
+  width: 100%;
+  aspect-ratio: 1;
+  background: #e4e2dc;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 44px; color: #bbb;
+  overflow: hidden;
+}
+
+.post-img img { width: 100%; height: 100%; object-fit: cover; }
+
+.post-actions {
+  display: flex;
+  gap: 12px;
+  padding: 10px 14px 4px;
+  font-size: 21px;
+}
+
+.post-actions button {
+  background: none; border: none; cursor: pointer;
+  font-size: 21px; color: #333;
+  display: flex; align-items: center;
+  transition: transform 0.15s;
+}
+
+.post-actions button:active { transform: scale(0.85); }
+.post-actions button.liked { color: #e03e3e; }
+
+.post-likes { margin: 3px 14px 0; font-size: 13px; font-weight: 600; }
+.post-caption { margin: 3px 14px 0; font-size: 13px; line-height: 1.4; }
+.post-caption b { font-weight: 600; margin-right: 4px; }
+.post-comments { margin: 2px 14px 0; font-size: 12px; color: #999; cursor: pointer; }
+
+/* ── Barre du bas ── */
+.bottom-nav {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 10px 0 8px;
+  border-top: 1px solid #e4e2dc;
+  flex-shrink: 0;
+  font-size: 21px;
+}
+
+.bottom-nav button {
+  background: none; border: none; cursor: pointer;
+  font-size: 21px; color: #555;
+  display: flex; align-items: center;
+  padding: 4px;
+}
+
+.bottom-nav .avatar-mini {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 600; color: #fff;
+}
+
+/* ── Formulaires (Auth + Création de post) ── */
+.form-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 20px;
+  overflow-y: auto;
+  gap: 14px;
+}
+
+.form-title {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.form-subtitle {
+  font-size: 13px;
+  color: #888;
+  margin-bottom: 6px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.form-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.form-group input,
+.form-group textarea {
+  border: 1px solid #d8d6d0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  background: #fff;
+  color: #1a1a1a;
+  font-family: inherit;
+  transition: border-color 0.15s;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #185fa5;
+}
+
+.form-group textarea { resize: none; height: 80px; }
+
+.btn-primary {
+  background: #1a1a1a;
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  padding: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.btn-primary:hover { opacity: 0.85; }
+.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-ghost {
+  background: none;
+  border: none;
+  color: #185fa5;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: center;
+  padding: 4px;
+}
+
+.form-error {
+  font-size: 12px;
+  color: #e03e3e;
+  background: #fdecea;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+/* ── Spinner de chargement ── */
+.spinner-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.spinner {
+  width: 28px; height: 28px;
+  border: 3px solid #ddd;
+  border-top-color: #1a1a1a;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Profil ── */
+.profile-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 20px 0 14px;
+  border-bottom: 1px solid #e4e2dc;
+}
+
+.profile-avatar {
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; font-weight: 700; color: #fff;
+}
+
+.profile-name { font-size: 16px; font-weight: 700; }
+.profile-bio  { font-size: 13px; color: #777; text-align: center; padding: 0 20px; }
+
+.btn-outline {
+  border: 1px solid #ccc;
+  background: none;
+  border-radius: 8px;
+  padding: 6px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  color: #333;
+}
+
+.btn-outline:hover { background: #f0ede7; }
+
+/* ── Upload image ── */
+.img-upload-zone {
+  width: 100%;
+  aspect-ratio: 1;
+  background: #e8e6e0;
+  border: 2px dashed #ccc;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #888;
+  overflow: hidden;
+}
+
+.img-upload-zone img {
+  width: 100%; height: 100%; object-fit: cover;
+}
+
+.img-upload-zone input { display: none; }
