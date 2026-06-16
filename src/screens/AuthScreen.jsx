@@ -31,8 +31,9 @@ export default function AuthScreen() {
     <div className="phone">
       <StatusBar />
       <div className="form-screen">
+
         <div>
-          <p className="form-title">{mode === 'login' ? 'Connexion' : 'Créer un compte'}</p>
+          <p className="form-logo">instagrim</p>
           <p className="form-subtitle">
             {mode === 'login' ? 'Retrouve ton personnage.' : 'Rejoins le monde RP.'}
           </p>
@@ -75,9 +76,12 @@ export default function AuthScreen() {
           {loading ? 'Chargement…' : mode === 'login' ? 'Se connecter' : 'Créer le compte'}
         </button>
 
+        <div className="divider">ou</div>
+
         <button className="btn-ghost" onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError('') }}>
           {mode === 'login' ? 'Pas encore de compte ? Créer un profil' : 'Déjà un compte ? Se connecter'}
         </button>
+
       </div>
     </div>
   )

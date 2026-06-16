@@ -24,7 +24,6 @@ export default function NewPostScreen({ onBack }) {
     setLoading(true)
     try {
       let imageUrl = null
-
       if (imageFile) {
         const ext = imageFile.name.split('.').pop()
         const path = `${user.id}/${Date.now()}.${ext}`
@@ -32,13 +31,9 @@ export default function NewPostScreen({ onBack }) {
           .from('post-images')
           .upload(path, imageFile)
         if (uploadError) throw uploadError
-
-        const { data: urlData } = supabase.storage
-          .from('post-images')
-          .getPublicUrl(path)
+        const { data: urlData } = supabase.storage.from('post-images').getPublicUrl(path)
         imageUrl = urlData.publicUrl
       }
-
       const { error: insertError } = await supabase.from('posts').insert({
         user_id: user.id,
         caption,
@@ -47,7 +42,6 @@ export default function NewPostScreen({ onBack }) {
         comments_count: 0
       })
       if (insertError) throw insertError
-
       onBack()
     } catch (e) {
       setError(e.message)
@@ -64,7 +58,7 @@ export default function NewPostScreen({ onBack }) {
           <span className="app-header-title">Nouveau post</span>
           <button
             className="icon-btn"
-            style={{ fontWeight: 700, color: '#185fa5' }}
+            style={{ fontWeight: 700, color: 'var(--accent)' }}
             onClick={handlePost}
             disabled={loading || (!caption && !imageFile)}
           >
@@ -72,11 +66,14 @@ export default function NewPostScreen({ onBack }) {
           </button>
         </div>
 
-        <div className="form-screen" style={{ gap: 12 }}>
+        <div className="form-screen" style={{ gap: 14 }}>
           <div className="img-upload-zone" onClick={() => inputRef.current.click()}>
             {preview
               ? <img src={preview} alt="aperçu" />
-              : <><span style={{ fontSize: 32 }}>🖼️</span><span>Appuie pour ajouter une photo</span></>
+              : <>
+                  <span style={{ fontSize: 36 }}>📸</span>
+                  <span>Appuie pour ajouter une photo</span>
+                </>
             }
             <input ref={inputRef} type="file" accept="image/*" onChange={handleImageChange} />
           </div>

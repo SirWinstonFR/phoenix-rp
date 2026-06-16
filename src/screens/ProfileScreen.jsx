@@ -36,12 +36,14 @@ export default function ProfileScreen({ onBack }) {
 
         <div style={{ flex: 1, overflowY: 'auto' }}>
           <div className="profile-header">
-            <div className="profile-avatar" style={{ background: profile?.avatar_color ?? '#888' }}>
-              {profile?.initials ?? '?'}
+            <div className="profile-avatar-ring">
+              <div className="profile-avatar" style={{ background: profile?.avatar_color ?? '#888' }}>
+                {profile?.initials ?? '?'}
+              </div>
             </div>
             <p className="profile-name">{profile?.username}</p>
             {profile?.location && (
-              <p style={{ fontSize: 12, color: '#aaa' }}>📍 {profile.location}</p>
+              <p className="profile-location">📍 {profile.location}</p>
             )}
             <p className="profile-bio">{profile?.bio || "Aucune bio pour l'instant."}</p>
           </div>
