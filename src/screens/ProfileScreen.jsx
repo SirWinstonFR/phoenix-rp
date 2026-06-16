@@ -36,20 +36,17 @@ export default function ProfileScreen({ onBack }) {
 
         <div style={{ flex: 1, overflowY: 'auto' }}>
           <div className="profile-header">
-            <div
-              className="profile-avatar"
-              style={{ background: profile?.avatar_color ?? '#888' }}
-            >
+            <div className="profile-avatar" style={{ background: profile?.avatar_color ?? '#888' }}>
               {profile?.initials ?? '?'}
             </div>
             <p className="profile-name">{profile?.username}</p>
             {profile?.location && (
               <p style={{ fontSize: 12, color: '#aaa' }}>📍 {profile.location}</p>
             )}
-            <p className="profile-bio">{profile?.bio || 'Aucune bio pour l\'instant.'}</p>
+            <p className="profile-bio">{profile?.bio || "Aucune bio pour l'instant."}</p>
           </div>
 
-          {editing && (
+          {editing ? (
             <div className="form-screen" style={{ paddingTop: 16 }}>
               <div className="form-group">
                 <label>Bio</label>
@@ -72,13 +69,9 @@ export default function ProfileScreen({ onBack }) {
                 {loading ? 'Sauvegarde…' : 'Sauvegarder'}
               </button>
             </div>
-          )}
-
-          {!editing && (
+          ) : (
             <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <button className="btn-outline" onClick={signOut}>
-                Se déconnecter
-              </button>
+              <button className="btn-outline" onClick={signOut}>Se déconnecter</button>
             </div>
           )}
         </div>

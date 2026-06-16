@@ -45,7 +45,7 @@ body {
   font-size: 13px;
 }
 
-/* ── Écrans (transition slide) ── */
+/* ── Écrans ── */
 .screen {
   flex: 1;
   display: flex;
@@ -65,10 +65,11 @@ body {
   padding: 16px 0 4px;
 }
 
-.home-time .big-clock {
+.big-clock {
   font-size: 48px;
   font-weight: 300;
   letter-spacing: -2px;
+  display: block;
 }
 
 .home-time .date {
@@ -109,6 +110,7 @@ body {
   justify-content: center;
   font-size: 24px;
   position: relative;
+  border: 1px solid #e0ddd7;
 }
 
 .app-label {
@@ -120,14 +122,18 @@ body {
 
 .app-badge {
   position: absolute;
-  top: -4px; right: -4px;
+  top: -4px;
+  right: -4px;
   background: #e03e3e;
   color: #fff;
   font-size: 9px;
   font-weight: 700;
   border-radius: 50%;
-  width: 16px; height: 16px;
-  display: flex; align-items: center; justify-content: center;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .home-bar {
@@ -193,7 +199,8 @@ body {
 }
 
 .post-avatar {
-  width: 32px; height: 32px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -212,8 +219,11 @@ body {
   width: 100%;
   aspect-ratio: 1;
   background: #e4e2dc;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 44px; color: #bbb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 44px;
+  color: #bbb;
   overflow: hidden;
 }
 
@@ -223,25 +233,26 @@ body {
   display: flex;
   gap: 12px;
   padding: 10px 14px 4px;
-  font-size: 21px;
 }
 
 .post-actions button {
-  background: none; border: none; cursor: pointer;
-  font-size: 21px; color: #333;
-  display: flex; align-items: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 21px;
+  display: flex;
+  align-items: center;
   transition: transform 0.15s;
 }
 
 .post-actions button:active { transform: scale(0.85); }
-.post-actions button.liked { color: #e03e3e; }
 
 .post-likes { margin: 3px 14px 0; font-size: 13px; font-weight: 600; }
 .post-caption { margin: 3px 14px 0; font-size: 13px; line-height: 1.4; }
 .post-caption b { font-weight: 600; margin-right: 4px; }
 .post-comments { margin: 2px 14px 0; font-size: 12px; color: #999; cursor: pointer; }
 
-/* ── Barre du bas ── */
+/* ── Barre de navigation basse ── */
 .bottom-nav {
   display: flex;
   justify-content: space-around;
@@ -249,29 +260,36 @@ body {
   padding: 10px 0 8px;
   border-top: 1px solid #e4e2dc;
   flex-shrink: 0;
-  font-size: 21px;
 }
 
 .bottom-nav button {
-  background: none; border: none; cursor: pointer;
-  font-size: 21px; color: #555;
-  display: flex; align-items: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 21px;
+  display: flex;
+  align-items: center;
   padding: 4px;
 }
 
-.bottom-nav .avatar-mini {
-  width: 24px; height: 24px;
+.avatar-mini {
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 10px; font-weight: 600; color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 600;
+  color: #fff;
 }
 
-/* ── Formulaires (Auth + Création de post) ── */
+/* ── Formulaires ── */
 .form-screen {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 20px 20px;
+  padding: 20px;
   overflow-y: auto;
   gap: 14px;
 }
@@ -347,6 +365,19 @@ body {
   padding: 4px;
 }
 
+.btn-outline {
+  border: 1px solid #ccc;
+  background: none;
+  border-radius: 8px;
+  padding: 6px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  color: #333;
+}
+
+.btn-outline:hover { background: #f0ede7; }
+
 .form-error {
   font-size: 12px;
   color: #e03e3e;
@@ -355,7 +386,7 @@ body {
   padding: 8px 10px;
 }
 
-/* ── Spinner de chargement ── */
+/* ── Spinner ── */
 .spinner-wrap {
   flex: 1;
   display: flex;
@@ -364,7 +395,8 @@ body {
 }
 
 .spinner {
-  width: 28px; height: 28px;
+  width: 28px;
+  height: 28px;
   border: 3px solid #ddd;
   border-top-color: #1a1a1a;
   border-radius: 50%;
@@ -384,27 +416,19 @@ body {
 }
 
 .profile-avatar {
-  width: 64px; height: 64px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 24px; font-weight: 700; color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
 }
 
 .profile-name { font-size: 16px; font-weight: 700; }
 .profile-bio  { font-size: 13px; color: #777; text-align: center; padding: 0 20px; }
-
-.btn-outline {
-  border: 1px solid #ccc;
-  background: none;
-  border-radius: 8px;
-  padding: 6px 18px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  color: #333;
-}
-
-.btn-outline:hover { background: #f0ede7; }
 
 /* ── Upload image ── */
 .img-upload-zone {
@@ -424,8 +448,5 @@ body {
   overflow: hidden;
 }
 
-.img-upload-zone img {
-  width: 100%; height: 100%; object-fit: cover;
-}
-
+.img-upload-zone img { width: 100%; height: 100%; object-fit: cover; }
 .img-upload-zone input { display: none; }

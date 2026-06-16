@@ -9,14 +9,12 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Récupère la session au chargement
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
       if (session?.user) fetchProfile(session.user.id)
       else setLoading(false)
     })
 
-    // Écoute les changements de connexion
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
       if (session?.user) fetchProfile(session.user.id)
@@ -39,7 +37,6 @@ export function AuthProvider({ children }) {
   async function signUp(email, password, username) {
     const { data, error } = await supabase.auth.signUp({ email, password })
     if (error) throw error
-    // Crée le profil associé
     await supabase.from('profiles').insert({
       id: data.user.id,
       username,

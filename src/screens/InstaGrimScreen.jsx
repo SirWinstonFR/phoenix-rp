@@ -9,13 +9,12 @@ export default function InstaGrimScreen({ onBack }) {
   const { profile } = useAuth()
   const [posts, setPosts] = useState([])
   const [loading, setLoading] = useState(true)
-  const [view, setView] = useState('feed') // 'feed' | 'new' | 'profile'
+  const [view, setView] = useState('feed')
   const [likedPosts, setLikedPosts] = useState(new Set())
 
   useEffect(() => {
     fetchPosts()
 
-    // Temps réel : écoute les nouveaux posts
     const channel = supabase
       .channel('posts')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, payload => {
@@ -46,7 +45,6 @@ export default function InstaGrimScreen({ onBack }) {
     })
 
     setPosts(prev => prev.map(p => p.id === postId ? { ...p, likes: newLikes } : p))
-
     await supabase.from('posts').update({ likes: newLikes }).eq('id', postId)
   }
 
@@ -56,7 +54,6 @@ export default function InstaGrimScreen({ onBack }) {
   return (
     <div className="phone">
       <StatusBar />
-
       <div className="screen">
         <div className="app-header">
           <button className="icon-btn" onClick={onBack}>←</button>
@@ -76,10 +73,7 @@ export default function InstaGrimScreen({ onBack }) {
             {posts.map(post => (
               <div className="post" key={post.id}>
                 <div className="post-header">
-                  <div
-                    className="post-avatar"
-                    style={{ background: post.profiles?.avatar_color ?? '#888' }}
-                  >
+                  <div className="post-avatar" style={{ background: post.profiles?.avatar_color ?? '#888' }}>
                     {post.profiles?.initials ?? '??'}
                   </div>
                   <div className="post-meta">
@@ -93,17 +87,11 @@ export default function InstaGrimScreen({ onBack }) {
                 </div>
 
                 <div className="post-img">
-                  {post.image_url
-                    ? <img src={post.image_url} alt="" />
-                    : <span>🖼️</span>
-                  }
+                  {post.image_url ? <img src={post.image_url} alt="" /> : <span>🖼️</span>}
                 </div>
 
                 <div className="post-actions">
-                  <button
-                    className={likedPosts.has(post.id) ? 'liked' : ''}
-                    onClick={() => toggleLike(post.id, post.likes)}
-                  >
+                  <button onClick={() => toggleLike(post.id, post.likes)}>
                     {likedPosts.has(post.id) ? '❤️' : '🤍'}
                   </button>
                   <button>💬</button>
@@ -111,9 +99,7 @@ export default function InstaGrimScreen({ onBack }) {
                 </div>
 
                 <p className="post-likes">{post.likes ?? 0} j'aime</p>
-                <p className="post-caption">
-                  <b>{post.profiles?.username}</b>{post.caption}
-                </p>
+                <p className="post-caption"><b>{post.profiles?.username}</b>{post.caption}</p>
                 {(post.comments_count ?? 0) > 0 && (
                   <p className="post-comments">Voir les {post.comments_count} commentaires</p>
                 )}
@@ -128,10 +114,7 @@ export default function InstaGrimScreen({ onBack }) {
           <button onClick={() => setView('new')}>➕</button>
           <button>🤍</button>
           <button onClick={() => setView('profile')}>
-            <div
-              className="avatar-mini"
-              style={{ background: profile?.avatar_color ?? '#888' }}
-            >
+            <div className="avatar-mini" style={{ background: profile?.avatar_color ?? '#888' }}>
               {profile?.initials ?? '?'}
             </div>
           </button>

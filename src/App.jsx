@@ -3,7 +3,6 @@ import { useAuth } from './context/AuthContext'
 import AuthScreen from './screens/AuthScreen'
 import HomeScreen from './screens/HomeScreen'
 import InstaGrimScreen from './screens/InstaGrimScreen'
-import './index.css'
 
 const SCREENS = {
   home: HomeScreen,

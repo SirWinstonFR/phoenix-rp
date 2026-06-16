@@ -22,11 +22,9 @@ export default function NewPostScreen({ onBack }) {
   async function handlePost() {
     setError('')
     setLoading(true)
-
     try {
       let imageUrl = null
 
-      // Upload de l'image dans Supabase Storage
       if (imageFile) {
         const ext = imageFile.name.split('.').pop()
         const path = `${user.id}/${Date.now()}.${ext}`
@@ -41,7 +39,6 @@ export default function NewPostScreen({ onBack }) {
         imageUrl = urlData.publicUrl
       }
 
-      // Insertion du post en base
       const { error: insertError } = await supabase.from('posts').insert({
         user_id: user.id,
         caption,
@@ -55,7 +52,6 @@ export default function NewPostScreen({ onBack }) {
     } catch (e) {
       setError(e.message)
     }
-
     setLoading(false)
   }
 
@@ -77,24 +73,14 @@ export default function NewPostScreen({ onBack }) {
         </div>
 
         <div className="form-screen" style={{ gap: 12 }}>
-          {/* Zone image */}
           <div className="img-upload-zone" onClick={() => inputRef.current.click()}>
             {preview
               ? <img src={preview} alt="aperçu" />
-              : <>
-                  <span style={{ fontSize: 32 }}>🖼️</span>
-                  <span>Appuie pour ajouter une photo</span>
-                </>
+              : <><span style={{ fontSize: 32 }}>🖼️</span><span>Appuie pour ajouter une photo</span></>
             }
-            <input
-              ref={inputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleImageChange}
-            />
+            <input ref={inputRef} type="file" accept="image/*" onChange={handleImageChange} />
           </div>
 
-          {/* Légende */}
           <div className="form-group">
             <label>Légende</label>
             <textarea

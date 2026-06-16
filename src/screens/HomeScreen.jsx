@@ -3,12 +3,12 @@ import StatusBar from '../components/StatusBar'
 import { useAuth } from '../context/AuthContext'
 
 const ALL_APPS = [
-  { id: 'messages', label: 'Messages',      icon: '💬', bg: '#e6f1fb', badge: 0 },
-  { id: 'phone',    label: 'Téléphone',     icon: '📞', bg: '#eaf3de', badge: 0 },
-  { id: 'instagrim',label: 'Instagrim',     icon: '📷', bg: '#fff',    badge: 1 },
-  { id: 'notes',    label: 'Notes',         icon: '📝', bg: '#fff',    badge: 0 },
-  { id: 'camera',   label: 'Appareil photo',icon: '🤳', bg: '#fff',    badge: 0 },
-  { id: 'settings', label: 'Réglages',      icon: '⚙️', bg: '#fff',    badge: 0 },
+  { id: 'messages',  label: 'Messages',       icon: '💬', bg: '#e6f1fb' },
+  { id: 'phone',     label: 'Téléphone',      icon: '📞', bg: '#eaf3de' },
+  { id: 'instagrim', label: 'Instagrim',      icon: '📷', bg: '#fff4e6' },
+  { id: 'notes',     label: 'Notes',          icon: '📝', bg: '#fff'    },
+  { id: 'camera',    label: 'Appareil photo', icon: '🤳', bg: '#fff'    },
+  { id: 'settings',  label: 'Réglages',       icon: '⚙️', bg: '#fff'    },
 ]
 
 export default function HomeScreen({ onOpenApp }) {
@@ -39,9 +39,6 @@ export default function HomeScreen({ onOpenApp }) {
             >
               <div className="app-icon-box" style={{ background: app.bg }}>
                 <span>{unlocked ? app.icon : '🔒'}</span>
-                {app.badge > 0 && unlocked && (
-                  <span className="app-badge">{app.badge}</span>
-                )}
               </div>
               <span className="app-label">{unlocked ? app.label : 'Verrouillée'}</span>
             </div>
