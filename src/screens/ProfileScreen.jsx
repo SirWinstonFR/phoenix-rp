@@ -11,14 +11,11 @@ export default function ProfileScreen({ onBack }) {
   const [error, setError] = useState('')
 
   async function handleSave() {
-    setLoading(true)
-    setError('')
+    setLoading(true); setError('')
     try {
       await updateProfile({ bio, location })
       setEditing(false)
-    } catch (e) {
-      setError(e.message)
-    }
+    } catch (e) { setError(e.message) }
     setLoading(false)
   }
 
@@ -37,14 +34,19 @@ export default function ProfileScreen({ onBack }) {
         <div style={{ flex: 1, overflowY: 'auto' }}>
           <div className="profile-header">
             <div className="profile-avatar-ring">
-              <div className="profile-avatar" style={{ background: profile?.avatar_color ?? '#888' }}>
+              <div className="profile-avatar" style={{ background: profile?.avatar_color ?? '#333' }}>
                 {profile?.initials ?? '?'}
               </div>
             </div>
             <p className="profile-name">{profile?.username}</p>
-            {profile?.location && (
-              <p className="profile-location">📍 {profile.location}</p>
-            )}
+            {profile?.location && <p className="profile-location">📍 {profile.location}</p>}
+
+            <div className="profile-stats">
+              <div className="stat"><span className="stat-number">0</span><span className="stat-label">Posts</span></div>
+              <div className="stat"><span className="stat-number">0</span><span className="stat-label">Abonnés</span></div>
+              <div className="stat"><span className="stat-number">0</span><span className="stat-label">Abonnements</span></div>
+            </div>
+
             <p className="profile-bio">{profile?.bio || "Aucune bio pour l'instant."}</p>
           </div>
 
@@ -52,19 +54,11 @@ export default function ProfileScreen({ onBack }) {
             <div className="form-screen" style={{ paddingTop: 16 }}>
               <div className="form-group">
                 <label>Bio</label>
-                <textarea
-                  value={bio}
-                  onChange={e => setBio(e.target.value)}
-                  placeholder="Décris ton personnage..."
-                />
+                <textarea value={bio} onChange={e => setBio(e.target.value)} placeholder="Décris ton personnage..." />
               </div>
               <div className="form-group">
                 <label>Lieu RP</label>
-                <input
-                  value={location}
-                  onChange={e => setLocation(e.target.value)}
-                  placeholder="ex: Île de Valoria"
-                />
+                <input value={location} onChange={e => setLocation(e.target.value)} placeholder="ex: Île de Valoria" />
               </div>
               {error && <p className="form-error">{error}</p>}
               <button className="btn-primary" onClick={handleSave} disabled={loading}>

@@ -3,12 +3,12 @@ import StatusBar from '../components/StatusBar'
 import { useAuth } from '../context/AuthContext'
 
 const ALL_APPS = [
-  { id: 'messages',  label: 'Messages',       icon: '💬', bg: '#1a1a2e' },
-  { id: 'phone',     label: 'Téléphone',      icon: '📞', bg: '#0d2818' },
-  { id: 'instagrim', label: 'Instagrim',      icon: '📷', bg: '#1a0d2e' },
-  { id: 'notes',     label: 'Notes',          icon: '📝', bg: '#1a1a1a' },
-  { id: 'camera',    label: 'Appareil photo', icon: '🤳', bg: '#1a1a1a' },
-  { id: 'settings',  label: 'Réglages',       icon: '⚙️', bg: '#1a1a1a' },
+  { id: 'messages',  label: 'Messages',       icon: '💬', bg: 'linear-gradient(135deg,#1a1a3e,#0d1a2e)', badge: 2 },
+  { id: 'phone',     label: 'Téléphone',      icon: '📞', bg: 'linear-gradient(135deg,#0d2818,#0a1f12)' },
+  { id: 'instagrim', label: 'Instagrim',      icon: '📷', bg: 'linear-gradient(135deg,#2a0d3e,#1a0a28)', badge: 1 },
+  { id: 'notes',     label: 'Notes',          icon: '📝', bg: 'linear-gradient(135deg,#1f1a0a,#2a2210)' },
+  { id: 'camera',    label: 'Appareil photo', icon: '🤳', bg: 'linear-gradient(135deg,#1a1a1a,#222)' },
+  { id: 'settings',  label: 'Réglages',       icon: '⚙️', bg: 'linear-gradient(135deg,#1a1a1a,#222)' },
 ]
 
 export default function HomeScreen({ onOpenApp }) {
@@ -21,33 +21,44 @@ export default function HomeScreen({ onOpenApp }) {
   return (
     <div className="phone">
       <StatusBar />
+      <div className="home-wrap">
 
-      <div className="home-time">
-        <Clock big />
-        <p className="date">{dateStr} · {location}</p>
-      </div>
+        <div className="home-time">
+          <Clock big />
+          <p className="home-date">{dateStr} · {location}</p>
+        </div>
 
-      <div className="app-grid">
-        {ALL_APPS.map((app, i) => {
-          const unlocked = unlockedApps.includes(app.id)
-          return (
-            <div
-              key={app.id}
-              className={`app-icon-wrap ${!unlocked ? 'locked' : ''}`}
-              onClick={() => unlocked && onOpenApp(app.id)}
-              style={{ animationDelay: `${i * 0.05}s` }}
-            >
-              <div className="app-icon-box" style={{ background: app.bg }}>
-                <span>{unlocked ? app.icon : '🔒'}</span>
+        {/* Bannière de notif RP */}
+        <div className="notif-banner">
+          <span className="notif-icon">🔔</span>
+          <span className="notif-text"><b>elara_rp</b> vous a envoyé un message</span>
+        </div>
+
+        <div className="app-grid">
+          {ALL_APPS.map((app, i) => {
+            const unlocked = unlockedApps.includes(app.id)
+            return (
+              <div
+                key={app.id}
+                className={`app-icon-wrap ${!unlocked ? 'locked' : ''}`}
+                onClick={() => unlocked && onOpenApp(app.id)}
+                style={{ animationDelay: `${i * 0.06}s` }}
+              >
+                <div className="app-icon-box" style={{ background: app.bg }}>
+                  <span>{unlocked ? app.icon : '🔒'}</span>
+                  {app.badge && unlocked && (
+                    <span className="app-badge">{app.badge}</span>
+                  )}
+                </div>
+                <span className="app-label">{unlocked ? app.label : 'Verrouillée'}</span>
               </div>
-              <span className="app-label">{unlocked ? app.label : 'Verrouillée'}</span>
-            </div>
-          )
-        })}
-      </div>
+            )
+          })}
+        </div>
 
-      <div className="home-bar">
-        <div className="home-indicator" />
+        <div className="home-bar">
+          <div className="home-indicator" />
+        </div>
       </div>
     </div>
   )
