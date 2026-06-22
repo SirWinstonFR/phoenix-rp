@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import StatusBar from '../components/StatusBar'
 
-export default function AuthScreen() {
+export default function AuthScreen({ onBack, onLoginSuccess }) {
   const { signIn, signUp } = useAuth()
   const [mode, setMode] = useState('login')
   const [email, setEmail] = useState('')
@@ -21,6 +21,8 @@ export default function AuthScreen() {
         if (!username.trim()) { setError('Choisis un pseudo.'); setLoading(false); return }
         await signUp(email, password, username.trim())
       }
+      // Connexion réussie → retour vers Instagrim
+      onLoginSuccess?.()
     } catch (e) {
       setError(e.message)
     }
@@ -32,9 +34,14 @@ export default function AuthScreen() {
       <StatusBar />
       <div className="form-screen">
 
+        {/* Bouton retour vers l'accueil */}
+        <button className="icon-btn" onClick={onBack} style={{ alignSelf: 'flex-start', marginBottom: 4 }}>
+          ← Accueil
+        </button>
+
         <div>
           <p className="form-logo">instagrim</p>
-          <p className="form-subtitle">
+          <p className="form-tagline">
             {mode === 'login' ? 'Retrouve ton personnage.' : 'Rejoins le monde RP.'}
           </p>
         </div>

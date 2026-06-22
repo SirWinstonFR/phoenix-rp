@@ -1,19 +1,18 @@
 import { useState, useRef } from 'react'
 import { useAuth } from './context/AuthContext'
-import AuthScreen from './screens/AuthScreen'
 import HomeScreen from './screens/HomeScreen'
 import InstaGrimScreen from './screens/InstaGrimScreen'
+import AuthScreen from './screens/AuthScreen'
 
 const SCREENS = {
   home:      HomeScreen,
   instagrim: InstaGrimScreen,
+  login:     AuthScreen,
 }
 
 export default function App() {
   const { user, loading } = useAuth()
   const [currentScreen, setCurrentScreen] = useState('home')
-
-  // ── Détection du swipe up ──
   const touchStartY = useRef(null)
 
   function handleTouchStart(e) {
@@ -23,7 +22,6 @@ export default function App() {
   function handleTouchEnd(e) {
     if (touchStartY.current === null) return
     const deltaY = touchStartY.current - e.changedTouches[0].clientY
-    // Swipe vers le haut d'au moins 60px → retour accueil
     if (deltaY > 60 && currentScreen !== 'home') {
       setCurrentScreen('home')
     }
@@ -38,7 +36,15 @@ export default function App() {
     )
   }
 
-  if (!user) return <AuthScreen />
+  // Si on essaie d'ouvrir Instagrim sans être connecté → écran de connexion
+  function handleOpenApp(appId) {
+    if (appId === 'instagrim' && !user) {
+      setCurrentScreen('login')
+      return
+    }
+    if (SCREENS[appId]) setCurrentScreen(appId)
+    else alert('Cette app arrive bientôt !')
+  }
 
   const Screen = SCREENS[currentScreen] ?? HomeScreen
 
@@ -49,11 +55,9 @@ export default function App() {
       style={{ display: 'contents' }}
     >
       <Screen
-        onOpenApp={appId => {
-          if (SCREENS[appId]) setCurrentScreen(appId)
-          else alert('Cette app arrive bientôt !')
-        }}
+        onOpenApp={handleOpenApp}
         onBack={() => setCurrentScreen('home')}
+        onLoginSuccess={() => setCurrentScreen('instagrim')}
       />
     </div>
   )
