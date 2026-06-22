@@ -1,13 +1,12 @@
 import { useState, useRef } from 'react'
 import { useAuth } from './context/AuthContext'
+import PhoneLoginScreen from './screens/PhoneLoginScreen'
 import HomeScreen from './screens/HomeScreen'
 import InstaGrimScreen from './screens/InstaGrimScreen'
-import AuthScreen from './screens/AuthScreen'
 
 const SCREENS = {
   home:      HomeScreen,
   instagrim: InstaGrimScreen,
-  login:     AuthScreen,
 }
 
 export default function App() {
@@ -22,28 +21,26 @@ export default function App() {
   function handleTouchEnd(e) {
     if (touchStartY.current === null) return
     const deltaY = touchStartY.current - e.changedTouches[0].clientY
-    if (deltaY > 60 && currentScreen !== 'home') {
+    // Swipe up = retour accueil (sauf si déjà sur l'accueil)
+    if (deltaY > 70 && currentScreen !== 'home') {
       setCurrentScreen('home')
     }
     touchStartY.current = null
   }
 
+  // Chargement initial
   if (loading) {
     return (
       <div className="phone" style={{ alignItems: 'center', justifyContent: 'center' }}>
         <div className="spinner" />
+        <p style={{ color: 'var(--t3)', fontSize: 12, marginTop: 12 }}>Chargement…</p>
       </div>
     )
   }
 
-  // Si on essaie d'ouvrir Instagrim sans être connecté → écran de connexion
-  function handleOpenApp(appId) {
-    if (appId === 'instagrim' && !user) {
-      setCurrentScreen('login')
-      return
-    }
-    if (SCREENS[appId]) setCurrentScreen(appId)
-    else alert('Cette app arrive bientôt !')
+  // Pas de compte → écran de login du TÉLÉPHONE (pas d'Instagrim)
+  if (!user) {
+    return <PhoneLoginScreen />
   }
 
   const Screen = SCREENS[currentScreen] ?? HomeScreen
@@ -55,9 +52,11 @@ export default function App() {
       style={{ display: 'contents' }}
     >
       <Screen
-        onOpenApp={handleOpenApp}
+        onOpenApp={appId => {
+          if (SCREENS[appId]) setCurrentScreen(appId)
+          else alert('Cette app arrive bientôt !')
+        }}
         onBack={() => setCurrentScreen('home')}
-        onLoginSuccess={() => setCurrentScreen('instagrim')}
       />
     </div>
   )
