@@ -33,6 +33,7 @@ export function AuthProvider({ children }) {
   }, [])
 
   async function fetchOrCreateProfile(user) {
+    // Cherche le profil existant
     const { data: existing } = await supabase
       .from('profiles')
       .select('*')
@@ -45,17 +46,21 @@ export function AuthProvider({ children }) {
       return
     }
 
+    // Pas de profil → on le crée
+    // Discord met le vrai nom dans full_name ou name (pas dans custom_claims)
     const discordUsername =
-      user.user_metadata?.custom_claims?.global_name ||
       user.user_metadata?.full_name ||
       user.user_metadata?.name ||
+      user.user_metadata?.global_name ||
       user.email?.split('@')[0] ||
       'joueur'
 
-    // Récupère l'avatar Discord si disponible
-    const discordAvatar = user.user_metadata?.avatar_url || user.user_metadata?.picture || null
+    const discordAvatar =
+      user.user_metadata?.avatar_url ||
+      user.user_metadata?.picture ||
+      null
 
-    const cleanUsername = discordUsername.replace(/[^a-zA-Z0-9_.-]/g, '_').slice(0, 20)
+    const cleanUsername = discordUsername.replace(/[^a-zA-Z0-9_.\- ]/g, '').slice(0, 30).trim()
     const initials = cleanUsername.slice(0, 2).toUpperCase()
     const color = randomColor()
 
@@ -74,7 +79,19 @@ export function AuthProvider({ children }) {
       .select()
       .single()
 
-    if (!error) setProfile(newProfile)
+    if (error) {
+      console.error('Erreur création profil:', error)
+      // Retente un fetch au cas où il aurait été créé entre temps
+      const { data: retry } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle()
+      if (retry) setProfile(retry)
+    } else {
+      setProfile(newProfile)
+    }
+
     setLoading(false)
   }
 
