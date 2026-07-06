@@ -24,7 +24,9 @@ export default function InstaGrimScreen({ onBack }) {
   const [activeNav, setActiveNav]           = useState('home')
   const [burstPost, setBurstPost]           = useState(null)
   const [unreadNotifs, setUnreadNotifs]     = useState(0)
-  const [viewingStories, setViewingStories] = useState(null) // { stories, startIndex }
+  const [viewingStories, setViewingStories] = useState(null)
+  const [postMenu, setPostMenu]             = useState(null) // postId du menu ouvert
+  const [commentMenu, setCommentMenu]       = useState(null) // commentId du menu ouvert
   const lastTap = useRef({})
 
   useEffect(() => {
@@ -185,6 +187,23 @@ export default function InstaGrimScreen({ onBack }) {
     lastTap.current[postId] = now
   }
 
+  async function deletePost(postId) {
+    if (!window.confirm('Supprimer ce post ?')) return
+    await supabase.from('posts').delete().eq('id', postId)
+    setPosts(prev => prev.filter(p => p.id !== postId))
+    setPostMenu(null)
+  }
+
+  async function deleteComment(commentId, postId) {
+    await supabase.from('comments').delete().eq('id', commentId)
+    setPosts(prev => prev.map(p =>
+      p.id === postId
+        ? { ...p, comments: p.comments.filter(c => c.id !== commentId) }
+        : p
+    ))
+    setCommentMenu(null)
+  }
+
   function openProfile(uid) {
     setViewedUserId(uid)
     setView('public-profile')
@@ -287,7 +306,47 @@ export default function InstaGrimScreen({ onBack }) {
                       <p className="post-location">📍 {post.profiles.location}</p>
                     )}
                   </div>
-                  <button className="post-more">···</button>
+                  <div style={{ position: 'relative' }}>
+                    <button className="post-more" onClick={() => setPostMenu(postMenu === post.id ? null : post.id)}>···</button>
+                    {postMenu === post.id && (
+                      <div style={{
+                        position: 'absolute', right: 0, top: '100%',
+                        background: 'var(--bg3)', border: '1px solid var(--border)',
+                        borderRadius: 12, overflow: 'hidden', zIndex: 50,
+                        minWidth: 140, boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+                        animation: 'fadeDown 0.15s ease',
+                      }}>
+                        {post.user_id === user.id && (
+                          <button
+                            onClick={() => deletePost(post.id)}
+                            style={{
+                              width: '100%', padding: '12px 16px',
+                              background: 'none', border: 'none',
+                              color: 'var(--danger)', fontSize: 13,
+                              fontWeight: 600, cursor: 'pointer',
+                              textAlign: 'left', fontFamily: 'inherit',
+                              display: 'flex', alignItems: 'center', gap: 8,
+                            }}
+                          >
+                            🗑️ Supprimer le post
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setPostMenu(null)}
+                          style={{
+                            width: '100%', padding: '12px 16px',
+                            background: 'none', border: 'none',
+                            color: 'var(--t2)', fontSize: 13,
+                            cursor: 'pointer', textAlign: 'left',
+                            fontFamily: 'inherit',
+                            display: 'flex', alignItems: 'center', gap: 8,
+                          }}
+                        >
+                          ✕ Fermer
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="post-img-wrap" onClick={() => handleTap(post.id, post.likes, post.user_id)}>
@@ -339,13 +398,58 @@ export default function InstaGrimScreen({ onBack }) {
                 {openComments === post.id && (
                   <div className="comments-section">
                     {post.comments.map(c => (
-                      <div className="comment-item" key={c.id}>
+                      <div className="comment-item" key={c.id} style={{ position: 'relative' }}>
                         <Avatar profile={c.profiles} size={26} style={{ cursor: 'pointer' }} />
-                        <p className="comment-text">
+                        <p className="comment-text" style={{ flex: 1 }}>
                           <b style={{ cursor: 'pointer' }} onClick={() => openProfile(c.user_id)}>
                             {c.profiles?.username ?? 'Joueur'}
                           </b>{' '}{c.content}
                         </p>
+                        {(c.user_id === user.id || post.user_id === user.id) && (
+                          <div style={{ position: 'relative' }}>
+                            <button
+                              onClick={() => setCommentMenu(commentMenu === c.id ? null : c.id)}
+                              style={{
+                                background: 'none', border: 'none',
+                                color: 'var(--t3)', fontSize: 14,
+                                cursor: 'pointer', padding: '0 4px',
+                                lineHeight: 1,
+                              }}
+                            >···</button>
+                            {commentMenu === c.id && (
+                              <div style={{
+                                position: 'absolute', right: 0, top: '100%',
+                                background: 'var(--bg3)', border: '1px solid var(--border)',
+                                borderRadius: 10, overflow: 'hidden', zIndex: 50,
+                                minWidth: 130, boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+                              }}>
+                                <button
+                                  onClick={() => deleteComment(c.id, post.id)}
+                                  style={{
+                                    width: '100%', padding: '10px 14px',
+                                    background: 'none', border: 'none',
+                                    color: 'var(--danger)', fontSize: 12,
+                                    fontWeight: 600, cursor: 'pointer',
+                                    textAlign: 'left', fontFamily: 'inherit',
+                                    display: 'flex', alignItems: 'center', gap: 6,
+                                  }}
+                                >
+                                  🗑️ Supprimer
+                                </button>
+                                <button
+                                  onClick={() => setCommentMenu(null)}
+                                  style={{
+                                    width: '100%', padding: '10px 14px',
+                                    background: 'none', border: 'none',
+                                    color: 'var(--t2)', fontSize: 12,
+                                    cursor: 'pointer', textAlign: 'left',
+                                    fontFamily: 'inherit',
+                                  }}
+                                >✕ Fermer</button>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     ))}
                     <div className="comment-input-row">
