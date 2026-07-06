@@ -9,21 +9,19 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Récupère la session existante au démarrage
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setUser(session.user)
-        fetchProfile(session.user.id)
+        fetchOrCreateProfile(session.user)
       } else {
         setLoading(false)
       }
     })
 
-    // Écoute tous les changements de session
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
         setUser(session.user)
-        await fetchProfile(session.user.id)
+        await fetchOrCreateProfile(session.user)
       } else {
         setUser(null)
         setProfile(null)
@@ -34,54 +32,48 @@ export function AuthProvider({ children }) {
     return () => subscription.unsubscribe()
   }, [])
 
-  async function fetchProfile(userId) {
-    const { data, error } = await supabase
+  async function fetchOrCreateProfile(user) {
+    // Cherche le profil existant
+    const { data: existing } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', userId)
-      .maybeSingle()   // ne plante pas si absent
+      .eq('id', user.id)
+      .maybeSingle()
 
-    setProfile(data ?? null)
-    setLoading(false)
-    return data
-  }
+    if (existing) {
+      setProfile(existing)
+      setLoading(false)
+      return
+    }
 
-  // Inscription : crée le compte + le profil en une fois
-  async function signUp(email, password, username) {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        // Pas de confirmation email requise (désactive dans Supabase Auth settings)
-        emailRedirectTo: undefined,
-      }
-    })
-    if (error) throw error
-    if (!data.user) throw new Error('Compte créé, vérifie ta boite mail pour confirmer.')
+    // Pas de profil → on le crée avec les infos Discord
+    const discordUsername =
+      user.user_metadata?.custom_claims?.global_name ||
+      user.user_metadata?.full_name ||
+      user.user_metadata?.name ||
+      user.email?.split('@')[0] ||
+      'joueur'
 
+    const cleanUsername = discordUsername.replace(/[^a-zA-Z0-9_.-]/g, '_').slice(0, 20)
+    const initials = cleanUsername.slice(0, 2).toUpperCase()
     const color = randomColor()
-    const { error: profileError } = await supabase.from('profiles').insert({
-      id: data.user.id,
-      username: username.trim(),
-      bio: '',
-      location: '',
-      avatar_color: color,
-      initials: username.trim().slice(0, 2).toUpperCase(),
-      unlocked_apps: ['messages', 'phone', 'instagrim', 'notes', 'camera', 'settings'],
-    })
 
-    if (profileError) throw profileError
+    const { data: newProfile, error } = await supabase
+      .from('profiles')
+      .insert({
+        id:           user.id,
+        username:     cleanUsername,
+        bio:          '',
+        location:     '',
+        avatar_color: color,
+        initials:     initials,
+        unlocked_apps: ['messages', 'phone', 'instagrim', 'notes', 'camera', 'settings'],
+      })
+      .select()
+      .single()
 
-    // Force le chargement du profil tout de suite
-    await fetchProfile(data.user.id)
-    return data
-  }
-
-  async function signIn(email, password) {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) throw error
-    // fetchProfile est appelé automatiquement par onAuthStateChange
-    return data
+    if (!error) setProfile(newProfile)
+    setLoading(false)
   }
 
   async function signOut() {
@@ -99,15 +91,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{
-      user,
-      profile,
-      loading,
-      signUp,
-      signIn,
-      signOut,
-      updateProfile,
-    }}>
+    <AuthContext.Provider value={{ user, profile, loading, signOut, updateProfile }}>
       {children}
     </AuthContext.Provider>
   )

@@ -1,159 +1,104 @@
 import { useState } from 'react'
-import { useAuth } from '../context/AuthContext'
+import { supabase } from '../supabase'
 import StatusBar from '../components/StatusBar'
 import Clock from '../components/Clock'
 
 export default function PhoneLoginScreen() {
-  const { signIn, signUp } = useAuth()
-  const [mode, setMode]         = useState('lock')      // 'lock' | 'login' | 'register'
-  const [email, setEmail]       = useState('')
-  const [password, setPassword] = useState('')
-  const [username, setUsername] = useState('')
-  const [error, setError]       = useState('')
-  const [loading, setLoading]   = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError]     = useState('')
 
   const today = new Date().toLocaleDateString('fr-FR', {
     weekday: 'long', day: 'numeric', month: 'long'
   })
 
-  async function handleSubmit() {
-    setError('')
+  async function loginWithDiscord() {
     setLoading(true)
-    try {
-      if (mode === 'login') {
-        await signIn(email, password)
-      } else {
-        if (!username.trim()) { setError('Choisis un pseudo.'); setLoading(false); return }
-        if (password.length < 6) { setError('Mot de passe trop court (6 caractères min).'); setLoading(false); return }
-        await signUp(email, password, username.trim())
+    setError('')
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'discord',
+      options: {
+        redirectTo: window.location.origin,
       }
-      // La session est automatiquement persistée par Supabase
-    } catch (e) {
-      setError(e.message)
+    })
+    if (error) {
+      setError(error.message)
+      setLoading(false)
     }
-    setLoading(false)
+    // Si pas d'erreur, Discord redirige automatiquement
   }
 
-  // ── Écran verrouillé ──
-  if (mode === 'lock') {
-    return (
-      <div className="phone">
-        <StatusBar />
-        <div style={{
-          flex: 1, display: 'flex', flexDirection: 'column',
-          alignItems: 'center', justifyContent: 'space-between',
-          padding: '20px 0 40px'
-        }}>
-          <div style={{ textAlign: 'center', marginTop: 20 }}>
-            <Clock big />
-            <p style={{ color: 'var(--t3)', fontSize: 13, marginTop: 6 }}>{today}</p>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, width: '100%', padding: '0 28px' }}>
-            <div style={{
-              fontSize: 13, color: 'var(--t2)', textAlign: 'center',
-              background: 'var(--glass)', border: '1px solid var(--border)',
-              borderRadius: 16, padding: '12px 20px',
-            }}>
-              🔒 Téléphone verrouillé
-            </div>
-
-            <button className="btn-primary" style={{ width: '100%' }} onClick={() => setMode('login')}>
-              Se connecter
-            </button>
-
-            <button className="btn-ghost" onClick={() => setMode('register')}>
-              Créer un nouveau compte
-            </button>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', justifyContent: 'center', paddingBottom: 16 }}>
-          <div className="home-indicator" />
-        </div>
-      </div>
-    )
-  }
-
-  // ── Formulaire login / register ──
   return (
     <div className="phone">
       <StatusBar />
-      <div className="form-screen">
 
-        <button
-          className="icon-btn"
-          onClick={() => { setMode('lock'); setError('') }}
-          style={{ alignSelf: 'flex-start' }}
-        >
-          ← Retour
-        </button>
+      <div style={{
+        flex: 1, display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'space-between',
+        padding: '24px 0 40px'
+      }}>
 
-        <div>
-          <p className="form-logo" style={{ fontSize: 24 }}>
-            {mode === 'login' ? '🔓 Connexion' : '📱 Nouveau téléphone'}
-          </p>
-          <p className="form-tagline">
-            {mode === 'login'
-              ? 'Retrouve ton personnage et tes applis.'
-              : 'Crée ton compte pour accéder à ton téléphone RP.'
-            }
-          </p>
+        {/* Heure + date */}
+        <div style={{ textAlign: 'center', marginTop: 16 }}>
+          <Clock big />
+          <p style={{ color: 'var(--t3)', fontSize: 13, marginTop: 6 }}>{today}</p>
         </div>
 
-        {mode === 'register' && (
-          <div className="form-group">
-            <label>Ton pseudo RP</label>
-            <input
-              placeholder="ex: jane_valoria"
-              value={username}
-              onChange={e => setUsername(e.target.value)}
-            />
-          </div>
-        )}
-
-        <div className="form-group">
-          <label>Email</label>
-          <input
-            type="email"
-            placeholder="ton@email.com"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-          />
-        </div>
-
-        <div className="form-group">
-          <label>Mot de passe</label>
-          <input
-            type="password"
-            placeholder="••••••••"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-          />
-        </div>
-
-        {error && <p className="form-error">{error}</p>}
-
-        <button className="btn-primary" onClick={handleSubmit} disabled={loading}>
-          {loading
-            ? 'Chargement…'
-            : mode === 'login' ? 'Déverrouiller' : 'Créer mon téléphone'
-          }
-        </button>
-
-        <div className="divider">ou</div>
-
-        <button className="btn-ghost" onClick={() => {
-          setMode(mode === 'login' ? 'register' : 'login')
-          setError('')
+        {/* Zone de connexion */}
+        <div style={{
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', gap: 16,
+          width: '100%', padding: '0 28px'
         }}>
-          {mode === 'login'
-            ? 'Pas encore de compte ? Créer un profil'
-            : 'Déjà un compte ? Se connecter'
-          }
-        </button>
 
+          <div style={{
+            fontSize: 13, color: 'var(--t2)', textAlign: 'center',
+            background: 'var(--glass)', border: '1px solid var(--border)',
+            borderRadius: 16, padding: '12px 20px', width: '100%'
+          }}>
+            🔒 Téléphone verrouillé
+          </div>
+
+          {error && <p className="form-error" style={{ width: '100%' }}>{error}</p>}
+
+          {/* Bouton Discord */}
+          <button
+            onClick={loginWithDiscord}
+            disabled={loading}
+            style={{
+              width: '100%',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              gap: 12,
+              background: '#5865F2',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 14,
+              padding: '14px',
+              fontSize: 15,
+              fontWeight: 700,
+              cursor: loading ? 'not-allowed' : 'pointer',
+              opacity: loading ? 0.6 : 1,
+              fontFamily: 'inherit',
+              boxShadow: '0 4px 20px rgba(88,101,242,0.4)',
+              transition: 'opacity 0.15s, transform 0.15s',
+            }}
+          >
+            {/* Logo Discord SVG */}
+            <svg width="22" height="22" viewBox="0 0 71 55" fill="none">
+              <path d="M60.1 4.9A58.6 58.6 0 0 0 45.5.4a40.6 40.6 0 0 0-1.8 3.7 54.2 54.2 0 0 0-16.3 0A40.6 40.6 0 0 0 25.6.4 58.4 58.4 0 0 0 11 4.9C1.6 19 -1 32.7.3 46.2a59 59 0 0 0 18 9.1 44.7 44.7 0 0 0 3.9-6.3 38.4 38.4 0 0 1-6.1-2.9l1.5-1.1a42 42 0 0 0 35.9 0l1.5 1.1a38.3 38.3 0 0 1-6.1 2.9 44.5 44.5 0 0 0 3.9 6.3 58.8 58.8 0 0 0 18-9.1C72 30.6 68.3 17 60.1 4.9ZM23.7 37.9c-3.5 0-6.4-3.2-6.4-7.2s2.8-7.2 6.4-7.2c3.5 0 6.4 3.2 6.3 7.2 0 4-2.8 7.2-6.3 7.2Zm23.6 0c-3.5 0-6.4-3.2-6.4-7.2s2.8-7.2 6.4-7.2c3.5 0 6.4 3.2 6.3 7.2 0 4-2.8 7.2-6.3 7.2Z" fill="currentColor"/>
+            </svg>
+            {loading ? 'Redirection…' : 'Se connecter avec Discord'}
+          </button>
+
+          <p style={{ fontSize: 11, color: 'var(--t3)', textAlign: 'center', lineHeight: 1.5 }}>
+            Ton compte Discord devient ton téléphone RP.{'\n'}
+            Aucun mot de passe supplémentaire.
+          </p>
+
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'center', paddingBottom: 16 }}>
+        <div className="home-indicator" />
       </div>
     </div>
   )
