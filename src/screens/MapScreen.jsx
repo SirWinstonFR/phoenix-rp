@@ -1,0 +1,514 @@
+import { useState, useEffect, useRef } from 'react'
+import { supabase } from '../supabase'
+import { useAuth } from '../context/AuthContext'
+import StatusBar from '../components/StatusBar'
+
+// Styles Mapbox disponibles
+const MAP_STYLES = [
+  { id: 'dark',      label: '🌑 Sombre',    url: 'mapbox://styles/mapbox/dark-v11' },
+  { id: 'satellite', label: '🛸 Satellite', url: 'mapbox://styles/mapbox/satellite-streets-v12' },
+  { id: 'streets',   label: '🗺️ Rues',      url: 'mapbox://styles/mapbox/streets-v12' },
+  { id: 'outdoors',  label: '🏔️ Relief',    url: 'mapbox://styles/mapbox/outdoors-v12' },
+]
+
+// Centre : Phoenix, Arizona
+const PHOENIX = { lat: 33.4484, lng: -112.0740 }
+
+export default function MapScreen({ onBack }) {
+  const { profile, user, updateProfile } = useAuth()
+  const mapContainer = useRef(null)
+  const mapRef       = useRef(null)
+  const markersRef   = useRef({})
+
+  const [players, setPlayers]         = useState([])
+  const [locations, setLocations]     = useState([])
+  const [styleIndex, setStyleIndex]   = useState(0)
+  const [showStylePicker, setShowStylePicker] = useState(false)
+  const [showAddLocation, setShowAddLocation] = useState(false)
+  const [newLocation, setNewLocation] = useState({ name: '', description: '', icon: '📍', color: '#b96eff' })
+  const [pendingCoords, setPendingCoords] = useState(null)
+  const [loading, setLoading]         = useState(true)
+  const [infoPopup, setInfoPopup]     = useState(null)
+
+  useEffect(() => {
+    initMap()
+    fetchPlayers()
+    fetchLocations()
+
+    const channel = supabase
+      .channel('map-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => fetchPlayers())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'map_locations' }, () => fetchLocations())
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+      mapRef.current?.remove()
+    }
+  }, [])
+
+  async function initMap() {
+    // Charger Mapbox GL JS dynamiquement
+    if (!window.mapboxgl) {
+      await loadScript('https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js')
+      await loadCSS('https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css')
+    }
+
+    const mapboxgl = window.mapboxgl
+    mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN
+
+    const map = new mapboxgl.Map({
+      container: mapContainer.current,
+      style: MAP_STYLES[0].url,
+      center: [PHOENIX.lng, PHOENIX.lat],
+      zoom: 11,
+      attributionControl: false,
+    })
+
+    map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'bottom-right')
+
+    // Clic sur la carte → déplacer son personnage ou ajouter un lieu
+    map.on('click', e => {
+      const coords = { lat: e.lngLat.lat, lng: e.lngLat.lng }
+      setPendingCoords(coords)
+    })
+
+    map.on('load', () => setLoading(false))
+
+    mapRef.current = map
+  }
+
+  function loadScript(src) {
+    return new Promise(resolve => {
+      const s = document.createElement('script')
+      s.src = src
+      s.onload = resolve
+      document.head.appendChild(s)
+    })
+  }
+
+  function loadCSS(href) {
+    return new Promise(resolve => {
+      const l = document.createElement('link')
+      l.rel = 'stylesheet'
+      l.href = href
+      l.onload = resolve
+      document.head.appendChild(l)
+    })
+  }
+
+  async function fetchPlayers() {
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, username, initials, avatar_color, avatar_url, map_lat, map_lng, map_visible')
+      .eq('map_visible', true)
+      .not('map_lat', 'is', null)
+    setPlayers(data ?? [])
+    updatePlayerMarkers(data ?? [])
+  }
+
+  async function fetchLocations() {
+    const { data } = await supabase
+      .from('map_locations')
+      .select('*')
+      .order('created_at', { ascending: true })
+    setLocations(data ?? [])
+    updateLocationMarkers(data ?? [])
+  }
+
+  function updatePlayerMarkers(players) {
+    if (!mapRef.current || !window.mapboxgl) return
+    const map = mapRef.current
+
+    // Nettoyer les anciens marqueurs joueurs
+    Object.entries(markersRef.current).forEach(([key, marker]) => {
+      if (key.startsWith('player-')) marker.remove()
+    })
+
+    players.forEach(p => {
+      const el = document.createElement('div')
+      el.style.cssText = `
+        width: 36px; height: 36px; border-radius: 50%;
+        background: ${p.avatar_color ?? '#555'};
+        border: 3px solid ${p.id === user?.id ? '#b96eff' : '#fff'};
+        display: flex; align-items: center; justify-content: center;
+        font-size: 13px; font-weight: 700; color: white;
+        cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+        overflow: hidden;
+        ${p.id === user?.id ? 'box-shadow: 0 0 0 2px #b96eff, 0 2px 12px rgba(185,110,255,0.5);' : ''}
+      `
+
+      if (p.avatar_url) {
+        el.innerHTML = `<img src="${p.avatar_url}" style="width:100%;height:100%;object-fit:cover;" />`
+      } else {
+        el.textContent = p.initials ?? '?'
+      }
+
+      // Label sous le marqueur
+      const label = document.createElement('div')
+      label.style.cssText = `
+        position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%);
+        background: rgba(0,0,0,0.75); color: white; font-size: 10px; font-weight: 600;
+        padding: 2px 6px; border-radius: 6px; white-space: nowrap;
+        font-family: Inter, sans-serif;
+      `
+      label.textContent = p.id === user?.id ? 'Toi' : p.username
+
+      const wrapper = document.createElement('div')
+      wrapper.style.cssText = 'position: relative; display: flex; flex-direction: column; align-items: center;'
+      wrapper.appendChild(el)
+      wrapper.appendChild(label)
+
+      wrapper.addEventListener('click', e => {
+        e.stopPropagation()
+        setInfoPopup({ type: 'player', data: p })
+      })
+
+      const marker = new window.mapboxgl.Marker({ element: wrapper, anchor: 'bottom' })
+        .setLngLat([p.map_lng, p.map_lat])
+        .addTo(map)
+
+      markersRef.current[`player-${p.id}`] = marker
+    })
+  }
+
+  function updateLocationMarkers(locations) {
+    if (!mapRef.current || !window.mapboxgl) return
+    const map = mapRef.current
+
+    Object.entries(markersRef.current).forEach(([key, marker]) => {
+      if (key.startsWith('loc-')) marker.remove()
+    })
+
+    locations.forEach(loc => {
+      const el = document.createElement('div')
+      el.style.cssText = `
+        width: 34px; height: 34px; border-radius: 50%;
+        background: ${loc.color ?? '#b96eff'};
+        display: flex; align-items: center; justify-content: center;
+        font-size: 16px; cursor: pointer;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+        border: 2px solid rgba(255,255,255,0.3);
+      `
+      el.textContent = loc.icon ?? '📍'
+
+      const label = document.createElement('div')
+      label.style.cssText = `
+        position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%);
+        background: ${loc.color ?? '#b96eff'}cc; color: white; font-size: 10px; font-weight: 600;
+        padding: 2px 6px; border-radius: 6px; white-space: nowrap;
+        font-family: Inter, sans-serif;
+      `
+      label.textContent = loc.name
+
+      const wrapper = document.createElement('div')
+      wrapper.style.cssText = 'position: relative; display: flex; flex-direction: column; align-items: center;'
+      wrapper.appendChild(el)
+      wrapper.appendChild(label)
+
+      wrapper.addEventListener('click', e => {
+        e.stopPropagation()
+        setInfoPopup({ type: 'location', data: loc })
+      })
+
+      const marker = new window.mapboxgl.Marker({ element: wrapper, anchor: 'bottom' })
+        .setLngLat([loc.lng, loc.lat])
+        .addTo(map)
+
+      markersRef.current[`loc-${loc.id}`] = marker
+    })
+  }
+
+  async function moveMyCharacter() {
+    if (!pendingCoords || !user) return
+    await updateProfile({ map_lat: pendingCoords.lat, map_lng: pendingCoords.lng })
+    setPendingCoords(null)
+    fetchPlayers()
+  }
+
+  async function addLocation() {
+    if (!pendingCoords || !newLocation.name.trim()) return
+    await supabase.from('map_locations').insert({
+      name:        newLocation.name.trim(),
+      description: newLocation.description.trim(),
+      icon:        newLocation.icon,
+      color:       newLocation.color,
+      lat:         pendingCoords.lat,
+      lng:         pendingCoords.lng,
+      created_by:  user.id,
+    })
+    setShowAddLocation(false)
+    setNewLocation({ name: '', description: '', icon: '📍', color: '#b96eff' })
+    setPendingCoords(null)
+    fetchLocations()
+  }
+
+  async function deleteLocation(id) {
+    await supabase.from('map_locations').delete().eq('id', id)
+    setInfoPopup(null)
+    fetchLocations()
+  }
+
+  function changeStyle(index) {
+    setStyleIndex(index)
+    setShowStylePicker(false)
+    mapRef.current?.setStyle(MAP_STYLES[index].url)
+    // Réappliquer les marqueurs après changement de style
+    setTimeout(() => {
+      updatePlayerMarkers(players)
+      updateLocationMarkers(locations)
+    }, 500)
+  }
+
+  function centerOnMe() {
+    if (!profile?.map_lat || !mapRef.current) return
+    mapRef.current.flyTo({
+      center: [profile.map_lng, profile.map_lat],
+      zoom: 14, duration: 1000,
+    })
+  }
+
+  return (
+    <div className="phone">
+      <StatusBar />
+      <div className="screen" style={{ position: 'relative' }}>
+
+        <div className="app-header">
+          <button className="icon-btn" onClick={onBack}>←</button>
+          <span className="app-header-title">Carte</span>
+          <button className="icon-btn" onClick={() => setShowStylePicker(!showStylePicker)}>🎨</button>
+        </div>
+
+        {/* Sélecteur de style */}
+        {showStylePicker && (
+          <div style={{
+            position: 'absolute', top: 52, right: 10, zIndex: 100,
+            background: 'var(--bg3)', border: '1px solid var(--border)',
+            borderRadius: 14, overflow: 'hidden',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+          }}>
+            {MAP_STYLES.map((s, i) => (
+              <button key={s.id} onClick={() => changeStyle(i)} style={{
+                width: '100%', padding: '10px 16px',
+                background: i === styleIndex ? 'var(--glass2)' : 'none',
+                border: 'none', color: i === styleIndex ? 'var(--accent)' : 'var(--t1)',
+                fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                textAlign: 'left', fontFamily: 'inherit',
+                borderBottom: i < MAP_STYLES.length - 1 ? '1px solid var(--border)' : 'none',
+              }}>
+                {s.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Carte */}
+        <div ref={mapContainer} style={{ flex: 1, position: 'relative' }}>
+          {loading && (
+            <div style={{
+              position: 'absolute', inset: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'var(--bg)', zIndex: 10,
+            }}>
+              <div className="spinner" />
+            </div>
+          )}
+        </div>
+
+        {/* Boutons flottants */}
+        <div style={{
+          position: 'absolute', bottom: 16, left: 12,
+          display: 'flex', flexDirection: 'column', gap: 8, zIndex: 50,
+        }}>
+          {/* Centrer sur moi */}
+          {profile?.map_lat && (
+            <button onClick={centerOnMe} style={{
+              width: 40, height: 40, borderRadius: 12,
+              background: 'var(--bg3)', border: '1px solid var(--border)',
+              color: 'var(--t1)', fontSize: 18, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+            }}>
+              🎯
+            </button>
+          )}
+
+          {/* Ajouter un lieu */}
+          <button onClick={() => { setShowAddLocation(true); setPendingCoords(null) }} style={{
+            width: 40, height: 40, borderRadius: 12,
+            background: 'var(--bg3)', border: '1px solid var(--border)',
+            color: 'var(--accent)', fontSize: 18, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+          }}>
+            ➕
+          </button>
+        </div>
+
+        {/* Popup clic sur la carte */}
+        {pendingCoords && !showAddLocation && (
+          <div style={{
+            position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)',
+            background: 'var(--bg3)', border: '1px solid var(--border)',
+            borderRadius: 16, padding: '12px 16px', zIndex: 50,
+            display: 'flex', gap: 8, boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+            minWidth: 220,
+          }}>
+            <button className="btn-primary" style={{ flex: 1, padding: '8px', fontSize: 12 }} onClick={moveMyCharacter}>
+              📍 Me placer ici
+            </button>
+            <button onClick={() => { setShowAddLocation(true) }} style={{
+              flex: 1, padding: '8px', fontSize: 12,
+              background: 'var(--glass2)', border: '1px solid var(--border2)',
+              borderRadius: 10, color: 'var(--t1)', cursor: 'pointer',
+              fontFamily: 'inherit', fontWeight: 600,
+            }}>
+              🏛️ Lieu RP
+            </button>
+            <button onClick={() => setPendingCoords(null)} style={{
+              padding: '8px 10px', background: 'none',
+              border: '1px solid var(--border)', borderRadius: 10,
+              color: 'var(--t2)', cursor: 'pointer', fontSize: 12,
+            }}>✕</button>
+          </div>
+        )}
+
+        {/* Formulaire ajout lieu */}
+        {showAddLocation && (
+          <div style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0,
+            background: 'var(--bg2)', border: '1px solid var(--border)',
+            borderRadius: '20px 20px 0 0', padding: '16px',
+            zIndex: 60, boxShadow: '0 -4px 20px rgba(0,0,0,0.5)',
+            display: 'flex', flexDirection: 'column', gap: 10,
+            animation: 'slideUp 0.25s ease',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--t1)' }}>
+                {pendingCoords ? '🏛️ Nouveau lieu RP' : '👆 Clique d\'abord sur la carte'}
+              </p>
+              <button onClick={() => { setShowAddLocation(false); setPendingCoords(null) }}
+                style={{ background: 'none', border: 'none', color: 'var(--t3)', fontSize: 18, cursor: 'pointer' }}>
+                ✕
+              </button>
+            </div>
+
+            {pendingCoords && (
+              <>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <input
+                    value={newLocation.icon}
+                    onChange={e => setNewLocation(p => ({ ...p, icon: e.target.value }))}
+                    style={{
+                      width: 44, height: 44, textAlign: 'center',
+                      fontSize: 22, border: '1px solid var(--border2)',
+                      borderRadius: 10, background: 'var(--bg3)',
+                      color: 'var(--t1)', fontFamily: 'inherit',
+                    }}
+                  />
+                  <input
+                    className="form-group input"
+                    placeholder="Nom du lieu (ex: Quartier Nord)"
+                    value={newLocation.name}
+                    onChange={e => setNewLocation(p => ({ ...p, name: e.target.value }))}
+                    style={{
+                      flex: 1, border: '1px solid var(--border2)',
+                      borderRadius: 10, padding: '10px 12px',
+                      background: 'var(--bg3)', color: 'var(--t1)',
+                      fontSize: 13, fontFamily: 'inherit', outline: 'none',
+                    }}
+                  />
+                </div>
+
+                <input
+                  placeholder="Description (optionnel)"
+                  value={newLocation.description}
+                  onChange={e => setNewLocation(p => ({ ...p, description: e.target.value }))}
+                  style={{
+                    border: '1px solid var(--border2)', borderRadius: 10,
+                    padding: '10px 12px', background: 'var(--bg3)',
+                    color: 'var(--t1)', fontSize: 13, fontFamily: 'inherit',
+                    outline: 'none',
+                  }}
+                />
+
+                {/* Couleur */}
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <span style={{ fontSize: 12, color: 'var(--t3)' }}>Couleur :</span>
+                  {['#b96eff', '#7b9fff', '#ff6eb4', '#22c55e', '#f59e0b', '#ef4444', '#06b6d4'].map(c => (
+                    <div key={c} onClick={() => setNewLocation(p => ({ ...p, color: c }))} style={{
+                      width: 22, height: 22, borderRadius: '50%', background: c,
+                      cursor: 'pointer',
+                      border: newLocation.color === c ? '2px solid #fff' : '2px solid transparent',
+                    }} />
+                  ))}
+                </div>
+
+                <button className="btn-primary" onClick={addLocation} disabled={!newLocation.name.trim()}>
+                  Ajouter le lieu
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Popup info joueur/lieu */}
+        {infoPopup && (
+          <div style={{
+            position: 'absolute', top: 60, left: '50%', transform: 'translateX(-50%)',
+            background: 'var(--bg3)', border: '1px solid var(--border)',
+            borderRadius: 16, padding: '14px 16px', zIndex: 60,
+            minWidth: 200, boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+            animation: 'fadeDown 0.2s ease',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                {infoPopup.type === 'player' ? (
+                  <>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--t1)' }}>
+                      {infoPopup.data.id === user?.id ? '👤 Toi' : `👤 ${infoPopup.data.username}`}
+                    </p>
+                    <p style={{ fontSize: 12, color: 'var(--t3)', marginTop: 4 }}>
+                      Joueur actif sur la carte
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--t1)' }}>
+                      {infoPopup.data.icon} {infoPopup.data.name}
+                    </p>
+                    {infoPopup.data.description && (
+                      <p style={{ fontSize: 12, color: 'var(--t2)', marginTop: 4, lineHeight: 1.4 }}>
+                        {infoPopup.data.description}
+                      </p>
+                    )}
+                    {infoPopup.data.created_by === user?.id && (
+                      <button
+                        onClick={() => deleteLocation(infoPopup.data.id)}
+                        style={{
+                          marginTop: 8, background: 'rgba(239,68,68,0.1)',
+                          border: '1px solid rgba(239,68,68,0.2)',
+                          borderRadius: 8, padding: '4px 10px',
+                          color: 'var(--danger)', fontSize: 11,
+                          fontWeight: 600, cursor: 'pointer',
+                          fontFamily: 'inherit',
+                        }}
+                      >
+                        🗑️ Supprimer
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+              <button onClick={() => setInfoPopup(null)} style={{
+                background: 'none', border: 'none',
+                color: 'var(--t3)', fontSize: 18, cursor: 'pointer', padding: 0,
+              }}>✕</button>
+            </div>
+          </div>
+        )}
+
+      </div>
+    </div>
+  )
+}

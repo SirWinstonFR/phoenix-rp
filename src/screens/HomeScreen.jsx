@@ -6,7 +6,8 @@ import { useAuth } from '../context/AuthContext'
 const ALL_APPS = [
   { id: 'messages',  label: 'Messages',       icon: '💬', bg: 'linear-gradient(135deg,#1a1a3e,#0d1a2e)', badge: 2 },
   { id: 'phone',     label: 'Téléphone',      icon: '📞', bg: 'linear-gradient(135deg,#0d2818,#0a1f12)' },
-  { id: 'instagrim', label: 'Capture', icon: null, img: '/capture.png', bg: 'transparent', badge: 1 },
+  { id: 'instagrim', label: 'Capture',        icon: null, img: '/capture.png', bg: 'transparent', badge: 1 },
+  { id: 'map',       label: 'Carte',          icon: '🗺️', bg: 'linear-gradient(135deg,#0a1f2e,#0d2a1a)' },
   { id: 'notes',     label: 'Notes',          icon: '📝', bg: 'linear-gradient(135deg,#1f1a0a,#2a2210)' },
   { id: 'camera',    label: 'Appareil photo', icon: '🤳', bg: 'linear-gradient(135deg,#1a1a1a,#222)' },
   { id: 'settings',  label: 'Réglages',       icon: '⚙️', bg: 'linear-gradient(135deg,#1a1a1a,#222)' },
@@ -14,7 +15,7 @@ const ALL_APPS = [
 
 export default function HomeScreen({ onOpenApp }) {
   const { profile, signOut } = useAuth()
-  const unlockedApps = profile?.unlocked_apps ?? ['messages', 'phone', 'instagrim']
+  const unlockedApps = profile?.unlocked_apps ?? ['messages', 'phone', 'instagrim', 'map']
   const today = new Date()
   const dateStr = today.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
   const location = profile?.location || 'Île de Valoria'

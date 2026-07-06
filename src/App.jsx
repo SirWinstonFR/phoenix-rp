@@ -3,10 +3,12 @@ import { useAuth } from './context/AuthContext'
 import PhoneLoginScreen from './screens/PhoneLoginScreen'
 import HomeScreen from './screens/HomeScreen'
 import InstaGrimScreen from './screens/InstaGrimScreen'
+import MapScreen from './screens/MapScreen'
 
 const SCREENS = {
   home:      HomeScreen,
   instagrim: InstaGrimScreen,
+  map:       MapScreen,
 }
 
 export default function App() {
