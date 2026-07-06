@@ -1,5 +1,6 @@
 import Clock from '../components/Clock'
 import StatusBar from '../components/StatusBar'
+import Avatar from '../components/Avatar'
 import { useAuth } from '../context/AuthContext'
 
 const ALL_APPS = [
@@ -12,7 +13,7 @@ const ALL_APPS = [
 ]
 
 export default function HomeScreen({ onOpenApp }) {
-  const { profile } = useAuth()
+  const { profile, signOut } = useAuth()
   const unlockedApps = profile?.unlocked_apps ?? ['messages', 'phone', 'instagrim']
   const today = new Date()
   const dateStr = today.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
@@ -28,10 +29,45 @@ export default function HomeScreen({ onOpenApp }) {
           <p className="home-date">{dateStr} · {location}</p>
         </div>
 
-        {/* Bannière de notif RP */}
-        <div className="notif-banner">
-          <span className="notif-icon">🔔</span>
-          <span className="notif-text"><b>elara_rp</b> vous a envoyé un message</span>
+        {/* Profil + déconnexion */}
+        <div style={{
+          display: 'flex', alignItems: 'center',
+          gap: 10, margin: '0 14px 4px',
+          padding: '8px 12px',
+          background: 'var(--glass)',
+          border: '1px solid var(--border)',
+          borderRadius: 16,
+          backdropFilter: 'blur(10px)',
+        }}>
+          <Avatar profile={profile} size={32} />
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--t1)', lineHeight: 1.2 }}>
+              {profile?.username ?? 'Joueur'}
+            </p>
+            {profile?.location && (
+              <p style={{ fontSize: 11, color: 'var(--t3)' }}>📍 {profile.location}</p>
+            )}
+          </div>
+          <button
+            onClick={signOut}
+            style={{
+              background: 'rgba(255,82,82,0.1)',
+              border: '1px solid rgba(255,82,82,0.2)',
+              borderRadius: 10,
+              padding: '6px 10px',
+              fontSize: 11,
+              fontWeight: 700,
+              color: '#ff5252',
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              transition: 'background 0.15s',
+              flexShrink: 0,
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,82,82,0.2)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,82,82,0.1)'}
+          >
+            🔒 Verrouiller
+          </button>
         </div>
 
         <div className="app-grid">
