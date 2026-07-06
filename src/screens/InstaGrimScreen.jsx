@@ -4,63 +4,90 @@ import { useAuth } from '../context/AuthContext'
 import StatusBar from '../components/StatusBar'
 import NewPostScreen from './NewPostScreen'
 import ProfileScreen from './ProfileScreen'
+import SearchScreen from './SearchScreen'
 
 export default function InstaGrimScreen({ onBack }) {
   const { profile, user } = useAuth()
-  const [posts, setPosts]               = useState([])
-  const [loading, setLoading]           = useState(true)
-  const [view, setView]                 = useState('feed')
-  const [likedPosts, setLikedPosts]     = useState(new Set())
-  const [savedPosts, setSavedPosts]     = useState(new Set())
-  const [openComments, setOpenComments] = useState(null)
+  const [posts, setPosts]                 = useState([])
+  const [loading, setLoading]             = useState(true)
+  const [view, setView]                   = useState('feed')
+  const [viewedUserId, setViewedUserId]   = useState(null)
+  const [likedPosts, setLikedPosts]       = useState(new Set())
+  const [savedPosts, setSavedPosts]       = useState(new Set())
+  const [openComments, setOpenComments]   = useState(null)
   const [commentInputs, setCommentInputs] = useState({})
-  const [activeNav, setActiveNav]       = useState('home')
-  const [burstPost, setBurstPost]       = useState(null)
+  const [activeNav, setActiveNav]         = useState('home')
+  const [burstPost, setBurstPost]         = useState(null)
   const lastTap = useRef({})
 
   useEffect(() => {
     fetchPosts()
-
     const channel = supabase
-      .channel('instagrim-posts')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => {
-        fetchPosts()
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, () => {
-        fetchPosts()
-      })
+      .channel('instagrim-v5')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => fetchPosts())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, () => fetchPosts())
       .subscribe()
-
     return () => supabase.removeChannel(channel)
   }, [])
 
   async function fetchPosts() {
-    const { data, error } = await supabase
+    const { data: postsData, error } = await supabase
       .from('posts')
-      .select(`
-        *,
-        profiles ( username, initials, avatar_color, location ),
-        comments (
-          id, content, created_at,
-          profiles ( username, initials, avatar_color )
-        )
-      `)
+      .select('*')
       .order('created_at', { ascending: false })
 
-    if (!error) setPosts(data ?? [])
+    if (error || !postsData?.length) {
+      setPosts([])
+      setLoading(false)
+      return
+    }
+
+    const userIds = [...new Set(postsData.map(p => p.user_id))]
+    const { data: profilesData } = await supabase
+      .from('profiles')
+      .select('id, username, initials, avatar_color, location')
+      .in('id', userIds)
+
+    const profilesMap = {}
+    profilesData?.forEach(p => { profilesMap[p.id] = p })
+
+    const postIds = postsData.map(p => p.id)
+    const { data: commentsData } = await supabase
+      .from('comments')
+      .select('id, post_id, content, created_at, user_id')
+      .in('post_id', postIds)
+      .order('created_at', { ascending: true })
+
+    const commentUserIds = [...new Set(commentsData?.map(c => c.user_id) ?? [])]
+    let commentProfilesMap = {}
+    if (commentUserIds.length > 0) {
+      const { data: cProfiles } = await supabase
+        .from('profiles')
+        .select('id, username, initials, avatar_color')
+        .in('id', commentUserIds)
+      cProfiles?.forEach(p => { commentProfilesMap[p.id] = p })
+    }
+
+    const enriched = postsData.map(post => ({
+      ...post,
+      profiles: profilesMap[post.user_id] ?? null,
+      comments: (commentsData ?? [])
+        .filter(c => c.post_id === post.id)
+        .map(c => ({ ...c, profiles: commentProfilesMap[c.user_id] ?? null }))
+    }))
+
+    setPosts(enriched)
     setLoading(false)
   }
 
   async function toggleLike(postId, currentLikes) {
     const isLiked = likedPosts.has(postId)
     const newLikes = isLiked ? currentLikes - 1 : currentLikes + 1
-
     setLikedPosts(prev => {
       const next = new Set(prev)
       isLiked ? next.delete(postId) : next.add(postId)
       return next
     })
-
     setPosts(prev => prev.map(p => p.id === postId ? { ...p, likes: newLikes } : p))
     await supabase.from('posts').update({ likes: newLikes }).eq('id', postId)
   }
@@ -79,27 +106,40 @@ export default function InstaGrimScreen({ onBack }) {
   async function sendComment(postId) {
     const content = commentInputs[postId]?.trim()
     if (!content || !user) return
-
     setCommentInputs(prev => ({ ...prev, [postId]: '' }))
-
-    const { error } = await supabase.from('comments').insert({
-      post_id: postId,
-      user_id: user.id,
-      content,
-    })
-
-    if (!error) fetchPosts()
+    await supabase.from('comments').insert({ post_id: postId, user_id: user.id, content })
+    fetchPosts()
   }
 
-  if (view === 'new')     return <NewPostScreen onBack={() => { setView('feed'); fetchPosts() }} />
-  if (view === 'profile') return <ProfileScreen onBack={() => setView('feed')} />
+  function openProfile(uid) {
+    setViewedUserId(uid)
+    setView('public-profile')
+  }
+
+  // Routing des vues
+  if (view === 'new') return (
+    <NewPostScreen onBack={() => { setView('feed'); fetchPosts() }} />
+  )
+  if (view === 'profile') return (
+    <ProfileScreen onBack={() => setView('feed')} onOpenProfile={openProfile} />
+  )
+  if (view === 'public-profile') return (
+    <ProfileScreen
+      userId={viewedUserId}
+      onBack={() => setView('feed')}
+      onOpenProfile={openProfile}
+    />
+  )
+  if (view === 'search') return (
+    <SearchScreen onBack={() => setView('feed')} onOpenProfile={uid => { openProfile(uid) }} />
+  )
 
   const stories = [
     { id: 'me', label: 'Toi', initials: profile?.initials ?? '?', color: profile?.avatar_color ?? '#555', isMe: true },
-    { id: 's1', label: 'elara_rp',  initials: 'EL', color: '#7c3aed' },
-    { id: 's2', label: 'kael.off',  initials: 'KO', color: '#2563eb' },
-    { id: 's3', label: 'mira_nox',  initials: 'MN', color: '#059669', seen: true },
-    { id: 's4', label: 'the_crow',  initials: 'TC', color: '#dc2626', seen: true },
+    { id: 's1', label: 'elara_rp', initials: 'EL', color: '#7c3aed' },
+    { id: 's2', label: 'kael.off', initials: 'KO', color: '#2563eb' },
+    { id: 's3', label: 'mira_nox', initials: 'MN', color: '#059669', seen: true },
+    { id: 's4', label: 'the_crow', initials: 'TC', color: '#dc2626', seen: true },
   ]
 
   return (
@@ -107,14 +147,12 @@ export default function InstaGrimScreen({ onBack }) {
       <StatusBar />
       <div className="screen">
 
-        {/* Header */}
         <div className="app-header">
           <button className="icon-btn" onClick={onBack}>←</button>
           <span className="app-header-title">instagrim</span>
           <button className="icon-btn">✉️</button>
         </div>
 
-        {/* Stories */}
         <div className="stories-row">
           {stories.map(s => (
             <div className="story-item" key={s.id}>
@@ -129,7 +167,6 @@ export default function InstaGrimScreen({ onBack }) {
           ))}
         </div>
 
-        {/* Feed */}
         {loading ? (
           <div className="feed">
             {[1, 2].map(i => (
@@ -158,14 +195,13 @@ export default function InstaGrimScreen({ onBack }) {
             {posts.map((post, i) => (
               <div className="post" key={post.id} style={{ animationDelay: `${i * 0.05}s` }}>
 
-                {/* Header du post */}
                 <div className="post-header">
                   <div className="post-avatar-ring">
                     <div className="post-avatar" style={{ background: post.profiles?.avatar_color ?? '#555' }}>
                       {post.profiles?.initials ?? '??'}
                     </div>
                   </div>
-                  <div className="post-meta">
+                  <div className="post-meta" onClick={() => openProfile(post.user_id)} style={{ cursor: 'pointer' }}>
                     <p className="post-username">{post.profiles?.username ?? 'inconnu'}</p>
                     {post.profiles?.location && (
                       <p className="post-location">📍 {post.profiles.location}</p>
@@ -174,7 +210,6 @@ export default function InstaGrimScreen({ onBack }) {
                   <button className="post-more">···</button>
                 </div>
 
-                {/* Image */}
                 <div className="post-img-wrap" onClick={() => handleTap(post.id, post.likes)}>
                   <div className="post-img">
                     {post.image_url ? <img src={post.image_url} alt="" /> : <span>🖼️</span>}
@@ -182,7 +217,6 @@ export default function InstaGrimScreen({ onBack }) {
                   {burstPost === post.id && <div className="like-burst">❤️</div>}
                 </div>
 
-                {/* Actions */}
                 <div className="post-actions">
                   <button
                     className={`action-btn ${likedPosts.has(post.id) ? 'liked' : ''}`}
@@ -190,10 +224,7 @@ export default function InstaGrimScreen({ onBack }) {
                   >
                     {likedPosts.has(post.id) ? '❤️' : '🤍'}
                   </button>
-                  <button
-                    className="action-btn"
-                    onClick={() => setOpenComments(openComments === post.id ? null : post.id)}
-                  >
+                  <button className="action-btn" onClick={() => setOpenComments(openComments === post.id ? null : post.id)}>
                     💬
                   </button>
                   <button className="action-btn">↗️</button>
@@ -212,12 +243,13 @@ export default function InstaGrimScreen({ onBack }) {
 
                 {post.caption ? (
                   <p className="post-caption">
-                    <b>{post.profiles?.username}</b>
+                    <b style={{ cursor: 'pointer' }} onClick={() => openProfile(post.user_id)}>
+                      {post.profiles?.username}
+                    </b>
                     {formatCaption(post.caption)}
                   </p>
                 ) : null}
 
-                {/* Commentaires */}
                 {post.comments?.length > 0 && openComments !== post.id && (
                   <p className="post-comments-link" onClick={() => setOpenComments(post.id)}>
                     Voir les {post.comments.length} commentaire{post.comments.length > 1 ? 's' : ''}
@@ -226,31 +258,29 @@ export default function InstaGrimScreen({ onBack }) {
 
                 {openComments === post.id && (
                   <div className="comments-section">
-                    {(post.comments ?? [])
-                      .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
-                      .map(c => (
-                        <div className="comment-item" key={c.id}>
-                          <div
-                            className="comment-avatar"
-                            style={{ background: c.profiles?.avatar_color ?? '#555', color: '#fff' }}
-                          >
-                            {c.profiles?.initials ?? '?'}
-                          </div>
-                          <p className="comment-text">
-                            <b>{c.profiles?.username ?? 'inconnu'}</b> {c.content}
-                          </p>
+                    {post.comments.map(c => (
+                      <div className="comment-item" key={c.id}>
+                        <div
+                          className="comment-avatar"
+                          style={{ background: c.profiles?.avatar_color ?? '#555', color: '#fff', cursor: 'pointer' }}
+                          onClick={() => openProfile(c.user_id)}
+                        >
+                          {c.profiles?.initials ?? '?'}
                         </div>
-                      ))
-                    }
+                        <p className="comment-text">
+                          <b style={{ cursor: 'pointer' }} onClick={() => openProfile(c.user_id)}>
+                            {c.profiles?.username ?? 'inconnu'}
+                          </b>{' '}{c.content}
+                        </p>
+                      </div>
+                    ))}
                     <div className="comment-input-row">
-                      <div
-                        style={{
-                          width: 28, height: 28, borderRadius: '50%',
-                          background: profile?.avatar_color ?? '#555',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: 10, fontWeight: 700, color: '#fff', flexShrink: 0
-                        }}
-                      >
+                      <div style={{
+                        width: 28, height: 28, borderRadius: '50%',
+                        background: profile?.avatar_color ?? '#555',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 10, fontWeight: 700, color: '#fff', flexShrink: 0
+                      }}>
                         {profile?.initials ?? '?'}
                       </div>
                       <input
@@ -271,24 +301,19 @@ export default function InstaGrimScreen({ onBack }) {
           </div>
         )}
 
-        {/* Nav */}
         <div className="bottom-nav">
           {[
             { id: 'home',   icon: '🏠', action: () => { setActiveNav('home'); setView('feed') } },
-            { id: 'search', icon: '🔍', action: () => setActiveNav('search') },
+            { id: 'search', icon: '🔍', action: () => { setActiveNav('search'); setView('search') } },
             { id: 'new',    icon: '➕', action: () => setView('new') },
             { id: 'notifs', icon: '🤍', action: () => setActiveNav('notifs') },
           ].map(btn => (
-            <button
-              key={btn.id}
-              className={`nav-btn ${activeNav === btn.id ? 'active' : ''}`}
-              onClick={btn.action}
-            >
+            <button key={btn.id} className={`nav-btn ${activeNav === btn.id ? 'active' : ''}`} onClick={btn.action}>
               {btn.icon}
               <div className="nav-dot" />
             </button>
           ))}
-          <button className="nav-btn" onClick={() => setView('profile')}>
+          <button className="nav-btn" onClick={() => { setActiveNav('profile'); setView('profile') }}>
             <div className="avatar-mini" style={{ background: profile?.avatar_color ?? '#555' }}>
               {profile?.initials ?? '?'}
             </div>
