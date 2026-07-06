@@ -4,32 +4,84 @@ import { useAuth } from '../context/AuthContext'
 import StatusBar from '../components/StatusBar'
 import Avatar from '../components/Avatar'
 import NewPostScreen from './NewPostScreen'
+import NewStoryScreen from './NewStoryScreen'
 import ProfileScreen from './ProfileScreen'
 import SearchScreen from './SearchScreen'
+import NotificationsScreen from './NotificationsScreen'
+import StoryViewer from './StoryViewer'
 
 export default function InstaGrimScreen({ onBack }) {
   const { profile, user } = useAuth()
-  const [posts, setPosts]                 = useState([])
-  const [loading, setLoading]             = useState(true)
-  const [view, setView]                   = useState('feed')
-  const [viewedUserId, setViewedUserId]   = useState(null)
-  const [likedPosts, setLikedPosts]       = useState(new Set())
-  const [savedPosts, setSavedPosts]       = useState(new Set())
-  const [openComments, setOpenComments]   = useState(null)
-  const [commentInputs, setCommentInputs] = useState({})
-  const [activeNav, setActiveNav]         = useState('home')
-  const [burstPost, setBurstPost]         = useState(null)
+  const [posts, setPosts]                   = useState([])
+  const [stories, setStories]               = useState([])
+  const [loading, setLoading]               = useState(true)
+  const [view, setView]                     = useState('feed')
+  const [viewedUserId, setViewedUserId]     = useState(null)
+  const [likedPosts, setLikedPosts]         = useState(new Set())
+  const [savedPosts, setSavedPosts]         = useState(new Set())
+  const [openComments, setOpenComments]     = useState(null)
+  const [commentInputs, setCommentInputs]   = useState({})
+  const [activeNav, setActiveNav]           = useState('home')
+  const [burstPost, setBurstPost]           = useState(null)
+  const [unreadNotifs, setUnreadNotifs]     = useState(0)
+  const [viewingStories, setViewingStories] = useState(null) // { stories, startIndex }
   const lastTap = useRef({})
 
   useEffect(() => {
     fetchPosts()
+    fetchStories()
+    fetchUnreadNotifs()
+
     const channel = supabase
-      .channel('instagrim-v6')
+      .channel('instagrim-v7')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => fetchPosts())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, () => fetchPosts())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'stories' }, () => fetchStories())
+      .on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'notifications',
+        filter: `user_id=eq.${user.id}`
+      }, () => fetchUnreadNotifs())
       .subscribe()
+
     return () => supabase.removeChannel(channel)
   }, [])
+
+  async function fetchUnreadNotifs() {
+    const { count } = await supabase
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('read', false)
+    setUnreadNotifs(count ?? 0)
+  }
+
+  async function fetchStories() {
+    const { data: storiesData } = await supabase
+      .from('stories')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (!storiesData?.length) { setStories([]); return }
+
+    const userIds = [...new Set(storiesData.map(s => s.user_id))]
+    const { data: profilesData } = await supabase
+      .from('profiles')
+      .select('id, username, initials, avatar_color, avatar_url')
+      .in('id', userIds)
+
+    const profilesMap = {}
+    profilesData?.forEach(p => { profilesMap[p.id] = p })
+
+    // Grouper les stories par utilisateur
+    const grouped = {}
+    storiesData.forEach(s => {
+      const uid = s.user_id
+      if (!grouped[uid]) grouped[uid] = { profile: profilesMap[uid], stories: [] }
+      grouped[uid].stories.push({ ...s, profiles: profilesMap[uid] })
+    })
+
+    setStories(Object.values(grouped))
+  }
 
   async function fetchPosts() {
     const { data: postsData, error } = await supabase
@@ -43,7 +95,6 @@ export default function InstaGrimScreen({ onBack }) {
       return
     }
 
-    // Fetch profils séparément pour éviter les erreurs RLS sur les jointures
     const userIds = [...new Set(postsData.map(p => p.user_id))]
     const { data: profilesData } = await supabase
       .from('profiles')
@@ -53,7 +104,6 @@ export default function InstaGrimScreen({ onBack }) {
     const profilesMap = {}
     profilesData?.forEach(p => { profilesMap[p.id] = p })
 
-    // Fetch commentaires
     const postIds = postsData.map(p => p.id)
     const { data: commentsData } = await supabase
       .from('comments')
@@ -61,7 +111,6 @@ export default function InstaGrimScreen({ onBack }) {
       .in('post_id', postIds)
       .order('created_at', { ascending: true })
 
-    // Fetch profils des commentateurs
     const commentUserIds = [...new Set(commentsData?.map(c => c.user_id) ?? [])]
     let commentProfilesMap = {}
     if (commentUserIds.length > 0) {
@@ -84,9 +133,10 @@ export default function InstaGrimScreen({ onBack }) {
     setLoading(false)
   }
 
-  async function toggleLike(postId, currentLikes) {
+  async function toggleLike(postId, currentLikes, postOwnerId) {
     const isLiked = likedPosts.has(postId)
     const newLikes = isLiked ? currentLikes - 1 : currentLikes + 1
+
     setLikedPosts(prev => {
       const next = new Set(prev)
       isLiked ? next.delete(postId) : next.add(postId)
@@ -94,25 +144,45 @@ export default function InstaGrimScreen({ onBack }) {
     })
     setPosts(prev => prev.map(p => p.id === postId ? { ...p, likes: newLikes } : p))
     await supabase.from('posts').update({ likes: newLikes }).eq('id', postId)
-  }
 
-  function handleTap(postId, currentLikes) {
-    const now = Date.now()
-    const last = lastTap.current[postId] ?? 0
-    if (now - last < 350) {
-      if (!likedPosts.has(postId)) toggleLike(postId, currentLikes)
-      setBurstPost(postId)
-      setTimeout(() => setBurstPost(null), 700)
+    // Envoyer une notification si ce n'est pas son propre post
+    if (!isLiked && postOwnerId !== user.id) {
+      await supabase.from('notifications').insert({
+        user_id:      postOwnerId,
+        from_user_id: user.id,
+        type:         'like',
+        post_id:      postId,
+      })
     }
-    lastTap.current[postId] = now
   }
 
-  async function sendComment(postId) {
+  async function sendComment(postId, postOwnerId) {
     const content = commentInputs[postId]?.trim()
     if (!content || !user) return
     setCommentInputs(prev => ({ ...prev, [postId]: '' }))
     await supabase.from('comments').insert({ post_id: postId, user_id: user.id, content })
+
+    // Notification si ce n'est pas son propre post
+    if (postOwnerId !== user.id) {
+      await supabase.from('notifications').insert({
+        user_id:      postOwnerId,
+        from_user_id: user.id,
+        type:         'comment',
+        post_id:      postId,
+      })
+    }
     fetchPosts()
+  }
+
+  function handleTap(postId, currentLikes, postOwnerId) {
+    const now = Date.now()
+    const last = lastTap.current[postId] ?? 0
+    if (now - last < 350) {
+      if (!likedPosts.has(postId)) toggleLike(postId, currentLikes, postOwnerId)
+      setBurstPost(postId)
+      setTimeout(() => setBurstPost(null), 700)
+    }
+    lastTap.current[postId] = now
   }
 
   function openProfile(uid) {
@@ -120,17 +190,28 @@ export default function InstaGrimScreen({ onBack }) {
     setView('public-profile')
   }
 
-  if (view === 'new') return <NewPostScreen onBack={() => { setView('feed'); fetchPosts() }} />
-  if (view === 'profile') return <ProfileScreen onBack={() => setView('feed')} onOpenProfile={openProfile} />
+  // Routing
+  if (view === 'new')          return <NewPostScreen onBack={() => { setView('feed'); fetchPosts() }} />
+  if (view === 'new-story')    return <NewStoryScreen onBack={() => { setView('feed'); fetchStories() }} />
+  if (view === 'profile')      return <ProfileScreen onBack={() => setView('feed')} onOpenProfile={openProfile} />
   if (view === 'public-profile') return <ProfileScreen userId={viewedUserId} onBack={() => setView('feed')} onOpenProfile={openProfile} />
-  if (view === 'search') return <SearchScreen onBack={() => setView('feed')} onOpenProfile={openProfile} />
+  if (view === 'search')       return <SearchScreen onBack={() => setView('feed')} onOpenProfile={openProfile} />
+  if (view === 'notifications') return <NotificationsScreen onBack={() => { setView('feed'); setUnreadNotifs(0); setActiveNav('home') }} onOpenProfile={openProfile} />
 
   return (
     <div className="phone">
       <StatusBar />
       <div className="screen">
 
-        {/* Header */}
+        {/* Story viewer (overlay) */}
+        {viewingStories && (
+          <StoryViewer
+            stories={viewingStories.stories}
+            startIndex={viewingStories.startIndex}
+            onClose={() => setViewingStories(null)}
+          />
+        )}
+
         <div className="app-header">
           <button className="icon-btn" onClick={onBack}>←</button>
           <span className="app-header-title">instagrim</span>
@@ -139,23 +220,34 @@ export default function InstaGrimScreen({ onBack }) {
 
         {/* Stories */}
         <div className="stories-row">
+          {/* Mon story (bouton ajouter) */}
           <div className="story-item">
-            <div className="story-add" onClick={() => setView('new')}>＋</div>
-            <span className="story-label">Toi</span>
+            <div className="story-add" onClick={() => setView('new-story')}>＋</div>
+            <span className="story-label">Ma story</span>
           </div>
-          {[
-            { id: 's1', label: 'elara_rp', initials: 'EL', color: '#7c3aed' },
-            { id: 's2', label: 'kael.off', initials: 'KO', color: '#2563eb' },
-            { id: 's3', label: 'mira_nox', initials: 'MN', color: '#059669', seen: true },
-            { id: 's4', label: 'the_crow', initials: 'TC', color: '#dc2626', seen: true },
-          ].map(s => (
-            <div className="story-item" key={s.id}>
-              <div className={`story-ring ${s.seen ? 'seen' : ''}`}>
-                <div className="story-inner" style={{ background: s.color }}>{s.initials}</div>
+
+          {/* Stories des autres */}
+          {stories.map((group, i) => {
+            const isMe = group.profile?.id === user.id
+            return (
+              <div
+                className="story-item" key={group.profile?.id ?? i}
+                onClick={() => setViewingStories({ stories: group.stories, startIndex: 0 })}
+              >
+                <div className="story-ring">
+                  {group.profile?.avatar_url
+                    ? <div className="story-inner">
+                        <img src={group.profile.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                      </div>
+                    : <div className="story-inner" style={{ background: group.profile?.avatar_color ?? '#555' }}>
+                        {group.profile?.initials ?? '?'}
+                      </div>
+                  }
+                </div>
+                <span className="story-label">{isMe ? 'Toi' : group.profile?.username ?? 'Joueur'}</span>
               </div>
-              <span className="story-label">{s.label}</span>
-            </div>
-          ))}
+            )
+          })}
         </div>
 
         {/* Feed */}
@@ -180,7 +272,7 @@ export default function InstaGrimScreen({ onBack }) {
               <div className="empty-state">
                 <div className="empty-icon">📸</div>
                 <p className="empty-title">Aucun post encore</p>
-                <p className="empty-sub">Appuie sur ＋ pour être le premier à publier !</p>
+                <p className="empty-sub">Appuie sur ＋ pour publier !</p>
               </div>
             )}
 
@@ -198,7 +290,7 @@ export default function InstaGrimScreen({ onBack }) {
                   <button className="post-more">···</button>
                 </div>
 
-                <div className="post-img-wrap" onClick={() => handleTap(post.id, post.likes)}>
+                <div className="post-img-wrap" onClick={() => handleTap(post.id, post.likes, post.user_id)}>
                   <div className="post-img">
                     {post.image_url ? <img src={post.image_url} alt="" /> : <span>🖼️</span>}
                   </div>
@@ -208,7 +300,7 @@ export default function InstaGrimScreen({ onBack }) {
                 <div className="post-actions">
                   <button
                     className={`action-btn ${likedPosts.has(post.id) ? 'liked' : ''}`}
-                    onClick={() => toggleLike(post.id, post.likes)}
+                    onClick={() => toggleLike(post.id, post.likes, post.user_id)}
                   >
                     {likedPosts.has(post.id) ? '❤️' : '🤍'}
                   </button>
@@ -263,9 +355,9 @@ export default function InstaGrimScreen({ onBack }) {
                         placeholder="Ajouter un commentaire…"
                         value={commentInputs[post.id] ?? ''}
                         onChange={e => setCommentInputs(prev => ({ ...prev, [post.id]: e.target.value }))}
-                        onKeyDown={e => e.key === 'Enter' && sendComment(post.id)}
+                        onKeyDown={e => e.key === 'Enter' && sendComment(post.id, post.user_id)}
                       />
-                      <button className="comment-send" onClick={() => sendComment(post.id)}>➤</button>
+                      <button className="comment-send" onClick={() => sendComment(post.id, post.user_id)}>➤</button>
                     </div>
                   </div>
                 )}
@@ -278,17 +370,35 @@ export default function InstaGrimScreen({ onBack }) {
 
         {/* Nav */}
         <div className="bottom-nav">
-          {[
-            { id: 'home',   icon: '🏠', action: () => { setActiveNav('home'); setView('feed') } },
-            { id: 'search', icon: '🔍', action: () => { setActiveNav('search'); setView('search') } },
-            { id: 'new',    icon: '➕', action: () => setView('new') },
-            { id: 'notifs', icon: '🤍', action: () => setActiveNav('notifs') },
-          ].map(btn => (
-            <button key={btn.id} className={`nav-btn ${activeNav === btn.id ? 'active' : ''}`} onClick={btn.action}>
-              {btn.icon}
-              <div className="nav-dot" />
-            </button>
-          ))}
+          <button className={`nav-btn ${activeNav === 'home' ? 'active' : ''}`} onClick={() => { setActiveNav('home'); setView('feed') }}>
+            🏠<div className="nav-dot" />
+          </button>
+          <button className={`nav-btn ${activeNav === 'search' ? 'active' : ''}`} onClick={() => { setActiveNav('search'); setView('search') }}>
+            🔍<div className="nav-dot" />
+          </button>
+          <button className="nav-btn" onClick={() => setView('new')}>
+            ➕<div className="nav-dot" />
+          </button>
+          <button
+            className={`nav-btn ${activeNav === 'notifs' ? 'active' : ''}`}
+            onClick={() => { setActiveNav('notifs'); setView('notifications') }}
+            style={{ position: 'relative' }}
+          >
+            🤍
+            {unreadNotifs > 0 && (
+              <div style={{
+                position: 'absolute', top: 0, right: 4,
+                background: 'var(--danger)', color: '#fff',
+                fontSize: 8, fontWeight: 800,
+                borderRadius: '50%', width: 14, height: 14,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                border: '1.5px solid var(--bg)',
+              }}>
+                {unreadNotifs > 9 ? '9+' : unreadNotifs}
+              </div>
+            )}
+            <div className="nav-dot" />
+          </button>
           <button className="nav-btn" onClick={() => { setActiveNav('profile'); setView('profile') }}>
             <Avatar profile={profile} size={26} style={{ border: 'none', padding: 0 }} />
             <div className="nav-dot" />
