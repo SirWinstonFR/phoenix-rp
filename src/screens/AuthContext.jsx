@@ -33,7 +33,6 @@ export function AuthProvider({ children }) {
   }, [])
 
   async function fetchOrCreateProfile(user) {
-    // Cherche le profil existant
     const { data: existing } = await supabase
       .from('profiles')
       .select('*')
@@ -46,13 +45,15 @@ export function AuthProvider({ children }) {
       return
     }
 
-    // Pas de profil → on le crée avec les infos Discord
     const discordUsername =
       user.user_metadata?.custom_claims?.global_name ||
       user.user_metadata?.full_name ||
       user.user_metadata?.name ||
       user.email?.split('@')[0] ||
       'joueur'
+
+    // Récupère l'avatar Discord si disponible
+    const discordAvatar = user.user_metadata?.avatar_url || user.user_metadata?.picture || null
 
     const cleanUsername = discordUsername.replace(/[^a-zA-Z0-9_.-]/g, '_').slice(0, 20)
     const initials = cleanUsername.slice(0, 2).toUpperCase()
@@ -61,12 +62,13 @@ export function AuthProvider({ children }) {
     const { data: newProfile, error } = await supabase
       .from('profiles')
       .insert({
-        id:           user.id,
-        username:     cleanUsername,
-        bio:          '',
-        location:     '',
-        avatar_color: color,
-        initials:     initials,
+        id:            user.id,
+        username:      cleanUsername,
+        bio:           '',
+        location:      '',
+        avatar_color:  color,
+        avatar_url:    discordAvatar,
+        initials:      initials,
         unlocked_apps: ['messages', 'phone', 'instagrim', 'notes', 'camera', 'settings'],
       })
       .select()

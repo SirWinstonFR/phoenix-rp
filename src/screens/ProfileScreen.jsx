@@ -1,29 +1,31 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../supabase'
 import { useAuth } from '../context/AuthContext'
 import StatusBar from '../components/StatusBar'
+import Avatar from '../components/Avatar'
 
 export default function ProfileScreen({ onBack, userId = null, onOpenProfile }) {
   const { profile: myProfile, user, updateProfile } = useAuth()
 
-  // Si userId fourni → profil public, sinon → mon profil
   const isOwnProfile = !userId || userId === user?.id
   const targetId = userId ?? user?.id
 
-  const [profile, setProfile]       = useState(isOwnProfile ? myProfile : null)
-  const [posts, setPosts]           = useState([])
-  const [stats, setStats]           = useState({ posts: 0, followers: 0, following: 0 })
+  const [profile, setProfile]         = useState(isOwnProfile ? myProfile : null)
+  const [posts, setPosts]             = useState([])
+  const [stats, setStats]             = useState({ posts: 0, followers: 0, following: 0 })
   const [isFollowing, setIsFollowing] = useState(false)
-  const [editing, setEditing]       = useState(false)
-  const [loading, setLoading]       = useState(!isOwnProfile)
-  const [saving, setSaving]         = useState(false)
-  const [error, setError]           = useState('')
+  const [editing, setEditing]         = useState(false)
+  const [loading, setLoading]         = useState(!isOwnProfile)
+  const [saving, setSaving]           = useState(false)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const [error, setError]             = useState('')
   const [selectedPost, setSelectedPost] = useState(null)
 
-  // Champs d'édition
   const [editUsername, setEditUsername] = useState(myProfile?.username ?? '')
   const [editBio, setEditBio]           = useState(myProfile?.bio ?? '')
   const [editLocation, setEditLocation] = useState(myProfile?.location ?? '')
+
+  const avatarInputRef = useRef()
 
   useEffect(() => {
     if (targetId) {
@@ -54,13 +56,12 @@ export default function ProfileScreen({ onBack, userId = null, onOpenProfile }) 
   }
 
   async function fetchStats() {
-    const [{ count: postsCount }, { count: followersCount }, { count: followingCount }] =
-      await Promise.all([
-        supabase.from('posts').select('*', { count: 'exact', head: true }).eq('user_id', targetId),
-        supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', targetId),
-        supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', targetId),
-      ])
-    setStats({ posts: postsCount ?? 0, followers: followersCount ?? 0, following: followingCount ?? 0 })
+    const [{ count: p }, { count: fr }, { count: fg }] = await Promise.all([
+      supabase.from('posts').select('*', { count: 'exact', head: true }).eq('user_id', targetId),
+      supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', targetId),
+      supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', targetId),
+    ])
+    setStats({ posts: p ?? 0, followers: fr ?? 0, following: fg ?? 0 })
   }
 
   async function checkFollowing() {
@@ -86,13 +87,34 @@ export default function ProfileScreen({ onBack, userId = null, onOpenProfile }) 
     }
   }
 
+  async function handleAvatarChange(e) {
+    const file = e.target.files[0]
+    if (!file || !user) return
+    setUploadingAvatar(true)
+    try {
+      const ext = file.name.split('.').pop()
+      const path = `${user.id}/avatar.${ext}`
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(path, file, { upsert: true })
+      if (uploadError) throw uploadError
+
+      const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path)
+      const avatarUrl = urlData.publicUrl + '?t=' + Date.now()
+      await updateProfile({ avatar_url: avatarUrl })
+    } catch (e) {
+      setError('Erreur upload avatar : ' + e.message)
+    }
+    setUploadingAvatar(false)
+  }
+
   async function handleSave() {
     setSaving(true)
     setError('')
     try {
       await updateProfile({
         username: editUsername.trim(),
-        bio: editBio.trim(),
+        bio:      editBio.trim(),
         location: editLocation.trim(),
         initials: editUsername.trim().slice(0, 2).toUpperCase(),
       })
@@ -112,7 +134,7 @@ export default function ProfileScreen({ onBack, userId = null, onOpenProfile }) 
     </div>
   )
 
-  // Vue d'un post sélectionné
+  // Vue post sélectionné
   if (selectedPost) return (
     <div className="phone">
       <StatusBar />
@@ -129,10 +151,15 @@ export default function ProfileScreen({ onBack, userId = null, onOpenProfile }) 
               : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>🖼️</div>
             }
           </div>
-          <div style={{ padding: '12px 16px' }}>
-            <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--t1)', marginBottom: 4 }}>{displayProfile?.username}</p>
-            {selectedPost.caption && <p style={{ fontSize: 13, color: 'var(--t2)', lineHeight: 1.5 }}>{selectedPost.caption}</p>}
-            <p style={{ fontSize: 11, color: 'var(--t3)', marginTop: 8 }}>{selectedPost.likes ?? 0} j'aime · {timeAgo(selectedPost.created_at)}</p>
+          <div style={{ padding: '14px 16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+              <Avatar profile={displayProfile} size={32} />
+              <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--t1)' }}>{displayProfile?.username}</p>
+            </div>
+            {selectedPost.caption && <p style={{ fontSize: 13, color: 'var(--t2)', lineHeight: 1.6 }}>{selectedPost.caption}</p>}
+            <p style={{ fontSize: 11, color: 'var(--t3)', marginTop: 8 }}>
+              ❤️ {selectedPost.likes ?? 0} · {timeAgo(selectedPost.created_at)}
+            </p>
           </div>
         </div>
       </div>
@@ -147,17 +174,15 @@ export default function ProfileScreen({ onBack, userId = null, onOpenProfile }) 
         <div className="app-header">
           <button className="icon-btn" onClick={onBack}>←</button>
           <span className="app-header-title">{displayProfile?.username ?? 'Profil'}</span>
-          {isOwnProfile && (
-            <button className="icon-btn" onClick={() => {
-              setEditUsername(myProfile?.username ?? '')
-              setEditBio(myProfile?.bio ?? '')
-              setEditLocation(myProfile?.location ?? '')
-              setEditing(!editing)
-            }}>
-              {editing ? '✕' : '✏️'}
-            </button>
-          )}
-          {!isOwnProfile && <span style={{ width: 32 }} />}
+          {isOwnProfile
+            ? <button className="icon-btn" onClick={() => {
+                setEditUsername(myProfile?.username ?? '')
+                setEditBio(myProfile?.bio ?? '')
+                setEditLocation(myProfile?.location ?? '')
+                setEditing(!editing)
+              }}>{editing ? '✕' : '✏️'}</button>
+            : <span style={{ width: 32 }} />
+          }
         </div>
 
         <div style={{ flex: 1, overflowY: 'auto' }}>
@@ -166,23 +191,32 @@ export default function ProfileScreen({ onBack, userId = null, onOpenProfile }) 
           <div style={{ padding: '20px 16px 16px', borderBottom: '1px solid var(--border)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 14 }}>
 
-              {/* Avatar */}
-              <div style={{
-                width: 72, height: 72, borderRadius: '50%',
-                padding: 2.5,
-                background: 'linear-gradient(135deg, #ff6eb4, #b96eff, #7b9fff)',
-                boxShadow: '0 0 20px rgba(185,110,255,0.3)',
-                flexShrink: 0,
-              }}>
-                <div style={{
-                  width: '100%', height: '100%', borderRadius: '50%',
-                  background: displayProfile?.avatar_color ?? '#333',
-                  border: '3px solid var(--bg)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 24, fontWeight: 800, color: '#fff',
-                }}>
-                  {displayProfile?.initials ?? '?'}
-                </div>
+              {/* Avatar cliquable si mon profil */}
+              <div style={{ position: 'relative' }}>
+                <Avatar profile={displayProfile} size={76} />
+                {isOwnProfile && (
+                  <>
+                    <div
+                      onClick={() => avatarInputRef.current.click()}
+                      style={{
+                        position: 'absolute', bottom: 0, right: 0,
+                        width: 24, height: 24, borderRadius: '50%',
+                        background: 'var(--accent)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 12, cursor: 'pointer',
+                        border: '2px solid var(--bg)',
+                      }}
+                    >
+                      {uploadingAvatar ? '⏳' : '📷'}
+                    </div>
+                    <input
+                      ref={avatarInputRef}
+                      type="file" accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={handleAvatarChange}
+                    />
+                  </>
+                )}
               </div>
 
               {/* Stats */}
@@ -200,46 +234,50 @@ export default function ProfileScreen({ onBack, userId = null, onOpenProfile }) 
               </div>
             </div>
 
-            {/* Bio */}
-            <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--t1)', marginBottom: 2 }}>
+            <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--t1)', marginBottom: 2 }}>
               {displayProfile?.username}
             </p>
             {displayProfile?.location && (
               <p style={{ fontSize: 11, color: 'var(--t3)', marginBottom: 4 }}>📍 {displayProfile.location}</p>
             )}
             <p style={{ fontSize: 13, color: 'var(--t2)', lineHeight: 1.5 }}>
-              {displayProfile?.bio || (isOwnProfile ? "Aucune bio — appuie sur ✏️ pour en ajouter une." : "Aucune bio.")}
+              {displayProfile?.bio || (isOwnProfile ? 'Appuie sur ✏️ pour ajouter une bio.' : 'Aucune bio.')}
             </p>
 
-            {/* Boutons */}
-            <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+            <div style={{ marginTop: 12 }}>
               {isOwnProfile ? (
-                <button className="btn-outline" style={{ flex: 1, padding: '8px' }}
-                  onClick={() => { setEditUsername(myProfile?.username ?? ''); setEditBio(myProfile?.bio ?? ''); setEditLocation(myProfile?.location ?? ''); setEditing(true) }}>
+                <button className="btn-outline" style={{ width: '100%', padding: '8px' }}
+                  onClick={() => {
+                    setEditUsername(myProfile?.username ?? '')
+                    setEditBio(myProfile?.bio ?? '')
+                    setEditLocation(myProfile?.location ?? '')
+                    setEditing(true)
+                  }}>
                   Modifier le profil
                 </button>
               ) : (
-                <button
-                  onClick={toggleFollow}
-                  style={{
-                    flex: 1, padding: '8px', border: 'none', borderRadius: 10,
-                    fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
-                    background: isFollowing ? 'var(--bg4)' : 'linear-gradient(135deg, #b96eff, #7b9fff)',
-                    color: '#fff',
-                  }}
-                >
-                  {isFollowing ? 'Abonné ✓' : 'Suivre'}
+                <button onClick={toggleFollow} style={{
+                  width: '100%', padding: '10px', border: 'none',
+                  borderRadius: 12, fontWeight: 700, fontSize: 14,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                  background: isFollowing
+                    ? 'var(--bg4)'
+                    : 'linear-gradient(135deg, #b96eff, #7b9fff)',
+                  color: '#fff',
+                  transition: 'opacity 0.15s',
+                }}>
+                  {isFollowing ? '✓ Abonné' : '+ Suivre'}
                 </button>
               )}
             </div>
           </div>
 
-          {/* Formulaire d'édition */}
+          {/* Formulaire édition */}
           {editing && isOwnProfile && (
-            <div style={{ padding: '16px', borderBottom: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ padding: '16px', borderBottom: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 12, background: 'var(--bg2)' }}>
               <div className="form-group">
                 <label>Pseudo</label>
-                <input value={editUsername} onChange={e => setEditUsername(e.target.value)} placeholder="ton_pseudo" />
+                <input value={editUsername} onChange={e => setEditUsername(e.target.value)} />
               </div>
               <div className="form-group">
                 <label>Bio</label>
@@ -261,38 +299,35 @@ export default function ProfileScreen({ onBack, userId = null, onOpenProfile }) 
             <div className="empty-state">
               <div className="empty-icon">📷</div>
               <p className="empty-title">Aucun post</p>
-              <p className="empty-sub">{isOwnProfile ? 'Publie ton premier post sur Instagrim !' : 'Ce joueur n\'a pas encore posté.'}</p>
+              <p className="empty-sub">
+                {isOwnProfile ? 'Publie ton premier post sur Instagrim !' : 'Ce joueur n\'a pas encore posté.'}
+              </p>
             </div>
           ) : (
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(3, 1fr)',
-              gap: 2,
-            }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 2 }}>
               {posts.map(post => (
                 <div
                   key={post.id}
                   onClick={() => setSelectedPost(post)}
                   style={{
-                    aspectRatio: '1',
-                    background: 'var(--bg2)',
-                    overflow: 'hidden',
-                    cursor: 'pointer',
-                    position: 'relative',
+                    aspectRatio: '1', background: 'var(--bg2)',
+                    overflow: 'hidden', cursor: 'pointer', position: 'relative',
                   }}
                 >
                   {post.image_url
                     ? <img src={post.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, color: 'var(--t3)' }}>🖼️</div>
                   }
-                  {/* Overlay au hover */}
                   <div style={{
                     position: 'absolute', inset: 0,
-                    background: 'rgba(0,0,0,0)',
+                    background: 'rgba(0,0,0,0.35)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 12, color: '#fff', fontWeight: 700,
-                    transition: 'background 0.2s',
-                  }}>
+                    opacity: 0, transition: 'opacity 0.2s',
+                    fontSize: 12, color: '#fff', fontWeight: 700, gap: 6,
+                  }}
+                    onMouseEnter={e => e.currentTarget.style.opacity = 1}
+                    onMouseLeave={e => e.currentTarget.style.opacity = 0}
+                  >
                     ❤️ {post.likes ?? 0}
                   </div>
                 </div>
@@ -300,13 +335,11 @@ export default function ProfileScreen({ onBack, userId = null, onOpenProfile }) 
             </div>
           )}
 
-          {/* Bouton déconnexion (mon profil uniquement) */}
           {isOwnProfile && !editing && (
             <div style={{ padding: '20px 16px' }}>
               <SignOutButton />
             </div>
           )}
-
         </div>
       </div>
     </div>

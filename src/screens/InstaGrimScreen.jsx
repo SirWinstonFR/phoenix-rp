@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../supabase'
 import { useAuth } from '../context/AuthContext'
 import StatusBar from '../components/StatusBar'
+import Avatar from '../components/Avatar'
 import NewPostScreen from './NewPostScreen'
 import ProfileScreen from './ProfileScreen'
 import SearchScreen from './SearchScreen'
@@ -23,7 +24,7 @@ export default function InstaGrimScreen({ onBack }) {
   useEffect(() => {
     fetchPosts()
     const channel = supabase
-      .channel('instagrim-v5')
+      .channel('instagrim-v6')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => fetchPosts())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, () => fetchPosts())
       .subscribe()
@@ -42,15 +43,17 @@ export default function InstaGrimScreen({ onBack }) {
       return
     }
 
+    // Fetch profils séparément pour éviter les erreurs RLS sur les jointures
     const userIds = [...new Set(postsData.map(p => p.user_id))]
     const { data: profilesData } = await supabase
       .from('profiles')
-      .select('id, username, initials, avatar_color, location')
+      .select('id, username, initials, avatar_color, avatar_url, location')
       .in('id', userIds)
 
     const profilesMap = {}
     profilesData?.forEach(p => { profilesMap[p.id] = p })
 
+    // Fetch commentaires
     const postIds = postsData.map(p => p.id)
     const { data: commentsData } = await supabase
       .from('comments')
@@ -58,12 +61,13 @@ export default function InstaGrimScreen({ onBack }) {
       .in('post_id', postIds)
       .order('created_at', { ascending: true })
 
+    // Fetch profils des commentateurs
     const commentUserIds = [...new Set(commentsData?.map(c => c.user_id) ?? [])]
     let commentProfilesMap = {}
     if (commentUserIds.length > 0) {
       const { data: cProfiles } = await supabase
         .from('profiles')
-        .select('id, username, initials, avatar_color')
+        .select('id, username, initials, avatar_color, avatar_url')
         .in('id', commentUserIds)
       cProfiles?.forEach(p => { commentProfilesMap[p.id] = p })
     }
@@ -116,57 +120,45 @@ export default function InstaGrimScreen({ onBack }) {
     setView('public-profile')
   }
 
-  // Routing des vues
-  if (view === 'new') return (
-    <NewPostScreen onBack={() => { setView('feed'); fetchPosts() }} />
-  )
-  if (view === 'profile') return (
-    <ProfileScreen onBack={() => setView('feed')} onOpenProfile={openProfile} />
-  )
-  if (view === 'public-profile') return (
-    <ProfileScreen
-      userId={viewedUserId}
-      onBack={() => setView('feed')}
-      onOpenProfile={openProfile}
-    />
-  )
-  if (view === 'search') return (
-    <SearchScreen onBack={() => setView('feed')} onOpenProfile={uid => { openProfile(uid) }} />
-  )
-
-  const stories = [
-    { id: 'me', label: 'Toi', initials: profile?.initials ?? '?', color: profile?.avatar_color ?? '#555', isMe: true },
-    { id: 's1', label: 'elara_rp', initials: 'EL', color: '#7c3aed' },
-    { id: 's2', label: 'kael.off', initials: 'KO', color: '#2563eb' },
-    { id: 's3', label: 'mira_nox', initials: 'MN', color: '#059669', seen: true },
-    { id: 's4', label: 'the_crow', initials: 'TC', color: '#dc2626', seen: true },
-  ]
+  if (view === 'new') return <NewPostScreen onBack={() => { setView('feed'); fetchPosts() }} />
+  if (view === 'profile') return <ProfileScreen onBack={() => setView('feed')} onOpenProfile={openProfile} />
+  if (view === 'public-profile') return <ProfileScreen userId={viewedUserId} onBack={() => setView('feed')} onOpenProfile={openProfile} />
+  if (view === 'search') return <SearchScreen onBack={() => setView('feed')} onOpenProfile={openProfile} />
 
   return (
     <div className="phone">
       <StatusBar />
       <div className="screen">
 
+        {/* Header */}
         <div className="app-header">
           <button className="icon-btn" onClick={onBack}>←</button>
           <span className="app-header-title">instagrim</span>
           <button className="icon-btn">✉️</button>
         </div>
 
+        {/* Stories */}
         <div className="stories-row">
-          {stories.map(s => (
+          <div className="story-item">
+            <div className="story-add" onClick={() => setView('new')}>＋</div>
+            <span className="story-label">Toi</span>
+          </div>
+          {[
+            { id: 's1', label: 'elara_rp', initials: 'EL', color: '#7c3aed' },
+            { id: 's2', label: 'kael.off', initials: 'KO', color: '#2563eb' },
+            { id: 's3', label: 'mira_nox', initials: 'MN', color: '#059669', seen: true },
+            { id: 's4', label: 'the_crow', initials: 'TC', color: '#dc2626', seen: true },
+          ].map(s => (
             <div className="story-item" key={s.id}>
-              {s.isMe
-                ? <div className="story-add" onClick={() => setView('new')}>＋</div>
-                : <div className={`story-ring ${s.seen ? 'seen' : ''}`}>
-                    <div className="story-inner" style={{ background: s.color }}>{s.initials}</div>
-                  </div>
-              }
+              <div className={`story-ring ${s.seen ? 'seen' : ''}`}>
+                <div className="story-inner" style={{ background: s.color }}>{s.initials}</div>
+              </div>
               <span className="story-label">{s.label}</span>
             </div>
           ))}
         </div>
 
+        {/* Feed */}
         {loading ? (
           <div className="feed">
             {[1, 2].map(i => (
@@ -196,13 +188,9 @@ export default function InstaGrimScreen({ onBack }) {
               <div className="post" key={post.id} style={{ animationDelay: `${i * 0.05}s` }}>
 
                 <div className="post-header">
-                  <div className="post-avatar-ring">
-                    <div className="post-avatar" style={{ background: post.profiles?.avatar_color ?? '#555' }}>
-                      {post.profiles?.initials ?? '??'}
-                    </div>
-                  </div>
+                  <Avatar profile={post.profiles} size={38} />
                   <div className="post-meta" onClick={() => openProfile(post.user_id)} style={{ cursor: 'pointer' }}>
-                    <p className="post-username">{post.profiles?.username ?? 'inconnu'}</p>
+                    <p className="post-username">{post.profiles?.username ?? 'Joueur'}</p>
                     {post.profiles?.location && (
                       <p className="post-location">📍 {post.profiles.location}</p>
                     )}
@@ -244,7 +232,7 @@ export default function InstaGrimScreen({ onBack }) {
                 {post.caption ? (
                   <p className="post-caption">
                     <b style={{ cursor: 'pointer' }} onClick={() => openProfile(post.user_id)}>
-                      {post.profiles?.username}
+                      {post.profiles?.username ?? 'Joueur'}
                     </b>
                     {formatCaption(post.caption)}
                   </p>
@@ -260,29 +248,16 @@ export default function InstaGrimScreen({ onBack }) {
                   <div className="comments-section">
                     {post.comments.map(c => (
                       <div className="comment-item" key={c.id}>
-                        <div
-                          className="comment-avatar"
-                          style={{ background: c.profiles?.avatar_color ?? '#555', color: '#fff', cursor: 'pointer' }}
-                          onClick={() => openProfile(c.user_id)}
-                        >
-                          {c.profiles?.initials ?? '?'}
-                        </div>
+                        <Avatar profile={c.profiles} size={26} style={{ cursor: 'pointer' }} />
                         <p className="comment-text">
                           <b style={{ cursor: 'pointer' }} onClick={() => openProfile(c.user_id)}>
-                            {c.profiles?.username ?? 'inconnu'}
+                            {c.profiles?.username ?? 'Joueur'}
                           </b>{' '}{c.content}
                         </p>
                       </div>
                     ))}
                     <div className="comment-input-row">
-                      <div style={{
-                        width: 28, height: 28, borderRadius: '50%',
-                        background: profile?.avatar_color ?? '#555',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 10, fontWeight: 700, color: '#fff', flexShrink: 0
-                      }}>
-                        {profile?.initials ?? '?'}
-                      </div>
+                      <Avatar profile={profile} size={28} />
                       <input
                         className="comment-input"
                         placeholder="Ajouter un commentaire…"
@@ -301,6 +276,7 @@ export default function InstaGrimScreen({ onBack }) {
           </div>
         )}
 
+        {/* Nav */}
         <div className="bottom-nav">
           {[
             { id: 'home',   icon: '🏠', action: () => { setActiveNav('home'); setView('feed') } },
@@ -314,9 +290,7 @@ export default function InstaGrimScreen({ onBack }) {
             </button>
           ))}
           <button className="nav-btn" onClick={() => { setActiveNav('profile'); setView('profile') }}>
-            <div className="avatar-mini" style={{ background: profile?.avatar_color ?? '#555' }}>
-              {profile?.initials ?? '?'}
-            </div>
+            <Avatar profile={profile} size={26} style={{ border: 'none', padding: 0 }} />
             <div className="nav-dot" />
           </button>
         </div>
