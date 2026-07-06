@@ -233,7 +233,7 @@ export default function InstaGrimScreen({ onBack }) {
 
         <div className="app-header">
           <button className="icon-btn" onClick={onBack}>←</button>
-          <span className="app-header-title">instagrim</span>
+          <span className="app-header-title">Capture</span>
           <button className="icon-btn">✉️</button>
         </div>
 

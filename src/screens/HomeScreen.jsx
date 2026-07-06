@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext'
 const ALL_APPS = [
   { id: 'messages',  label: 'Messages',       icon: '💬', bg: 'linear-gradient(135deg,#1a1a3e,#0d1a2e)', badge: 2 },
   { id: 'phone',     label: 'Téléphone',      icon: '📞', bg: 'linear-gradient(135deg,#0d2818,#0a1f12)' },
-  { id: 'instagrim', label: 'Instagrim',      icon: '📷', bg: 'linear-gradient(135deg,#2a0d3e,#1a0a28)', badge: 1 },
+  { id: 'instagrim', label: 'Capture', icon: null, img: '/capture.png', bg: 'transparent', badge: 1 },
   { id: 'notes',     label: 'Notes',          icon: '📝', bg: 'linear-gradient(135deg,#1f1a0a,#2a2210)' },
   { id: 'camera',    label: 'Appareil photo', icon: '🤳', bg: 'linear-gradient(135deg,#1a1a1a,#222)' },
   { id: 'settings',  label: 'Réglages',       icon: '⚙️', bg: 'linear-gradient(135deg,#1a1a1a,#222)' },
@@ -80,8 +80,11 @@ export default function HomeScreen({ onOpenApp }) {
                 onClick={() => unlocked && onOpenApp(app.id)}
                 style={{ animationDelay: `${i * 0.06}s` }}
               >
-                <div className="app-icon-box" style={{ background: app.bg }}>
-                  <span>{unlocked ? app.icon : '🔒'}</span>
+                <div className="app-icon-box" style={{ background: app.bg, overflow: 'hidden', padding: 0 }}>
+                  {unlocked && app.img
+                    ? <img src={app.img} alt={app.label} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 16 }} />
+                    : <span>{unlocked ? app.icon : '🔒'}</span>
+                  }
                   {app.badge && unlocked && (
                     <span className="app-badge">{app.badge}</span>
                   )}
