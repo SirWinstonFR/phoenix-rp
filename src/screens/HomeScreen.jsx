@@ -80,15 +80,25 @@ export default function HomeScreen({ onOpenApp }) {
                 onClick={() => unlocked && onOpenApp(app.id)}
                 style={{ animationDelay: `${i * 0.06}s` }}
               >
-                <div className="app-icon-box" style={{ background: app.bg, overflow: 'hidden', padding: 0, borderRadius: 18 }}>
-                  {unlocked && app.img
-                    ? <img src={app.img} alt={app.label} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                    : <span>{unlocked ? app.icon : '🔒'}</span>
-                  }
-                  {app.badge && unlocked && (
-                    <span className="app-badge">{app.badge}</span>
-                  )}
-                </div>
+                {unlocked && app.img ? (
+                  <div style={{ position: 'relative', width: 58, height: 58 }}>
+                    <img
+                      src={app.img}
+                      alt={app.label}
+                      style={{ width: 58, height: 58, borderRadius: 18, display: 'block', objectFit: 'cover' }}
+                    />
+                    {app.badge && (
+                      <span className="app-badge">{app.badge}</span>
+                    )}
+                  </div>
+                ) : (
+                  <div className="app-icon-box" style={{ background: app.bg }}>
+                    <span>{unlocked ? app.icon : '🔒'}</span>
+                    {app.badge && unlocked && (
+                      <span className="app-badge">{app.badge}</span>
+                    )}
+                  </div>
+                )}
                 <span className="app-label">{unlocked ? app.label : 'Verrouillée'}</span>
               </div>
             )
