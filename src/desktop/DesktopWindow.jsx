@@ -14,7 +14,12 @@ export default function DesktopWindow({
   const dragRef = useRef(null)
   const winRef  = useRef(null)
 
-  // Drag de la fenêtre
+  // Forcer le resize de la carte Mapbox après maximize/restore
+  useEffect(() => {
+    setTimeout(() => {
+      window.dispatchEvent(new Event('resize'))
+    }, 50)
+  }, [maximized])
   function onTitlebarMouseDown(e) {
     if (maximized) return
     if (e.target.closest('.window-controls')) return
