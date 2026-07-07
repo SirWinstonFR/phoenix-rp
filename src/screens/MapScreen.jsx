@@ -35,6 +35,9 @@ export default function MapScreen({ onBack }) {
     fetchPlayers()
     fetchLocations()
 
+    // Polling toutes les 10 secondes pour les positions joueurs
+    const interval = setInterval(() => fetchPlayers(), 10000)
+
     const channel = supabase
       .channel('map-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => fetchPlayers())
@@ -42,6 +45,7 @@ export default function MapScreen({ onBack }) {
       .subscribe()
 
     return () => {
+      clearInterval(interval)
       supabase.removeChannel(channel)
       mapRef.current?.remove()
     }
@@ -73,7 +77,12 @@ export default function MapScreen({ onBack }) {
       setPendingCoords(coords)
     })
 
-    map.on('load', () => setLoading(false))
+    map.on('load', () => {
+      setLoading(false)
+      // Réappliquer les marqueurs une fois la carte prête
+      fetchPlayers()
+      fetchLocations()
+    })
 
     mapRef.current = map
   }
