@@ -13,7 +13,7 @@ const ALL_APPS = [
   { id: 'settings',  label: 'Réglages',       icon: '⚙️', bg: 'linear-gradient(135deg,#1a1a1a,#222)' },
 ]
 
-export default function HomeScreen({ onOpenApp }) {
+export default function HomeScreen({ onOpenApp, onSwitchToDesktop }) {
   const { profile, signOut } = useAuth()
   const unlockedApps = profile?.unlocked_apps ?? ['messages', 'phone', 'instagrim', 'map']
   const today = new Date()
@@ -49,6 +49,21 @@ export default function HomeScreen({ onOpenApp }) {
               <p style={{ fontSize: 11, color: 'var(--t3)' }}>📍 {profile.location}</p>
             )}
           </div>
+          {onSwitchToDesktop && (
+            <button
+              onClick={onSwitchToDesktop}
+              style={{
+                background: 'rgba(185,110,255,0.1)',
+                border: '1px solid rgba(185,110,255,0.2)',
+                borderRadius: 10, padding: '6px 10px',
+                fontSize: 11, fontWeight: 700, color: 'var(--accent)',
+                cursor: 'pointer', fontFamily: 'inherit',
+                flexShrink: 0,
+              }}
+            >
+              🖥️ Desktop
+            </button>
+          )}
           <button
             onClick={signOut}
             style={{

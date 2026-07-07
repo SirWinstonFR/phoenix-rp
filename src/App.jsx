@@ -4,6 +4,7 @@ import PhoneLoginScreen from './screens/PhoneLoginScreen'
 import HomeScreen from './screens/HomeScreen'
 import InstaGrimScreen from './screens/InstaGrimScreen'
 import MapScreen from './screens/MapScreen'
+import DesktopMode from './desktop/DesktopMode'
 
 const SCREENS = {
   home:      HomeScreen,
@@ -14,6 +15,7 @@ const SCREENS = {
 export default function App() {
   const { user, loading } = useAuth()
   const [currentScreen, setCurrentScreen] = useState('home')
+  const [mode, setMode] = useState('phone')
   const touchStartY = useRef(null)
 
   function handleTouchStart(e) {
@@ -23,14 +25,10 @@ export default function App() {
   function handleTouchEnd(e) {
     if (touchStartY.current === null) return
     const deltaY = touchStartY.current - e.changedTouches[0].clientY
-    // Swipe up = retour accueil (sauf si déjà sur l'accueil)
-    if (deltaY > 70 && currentScreen !== 'home') {
-      setCurrentScreen('home')
-    }
+    if (deltaY > 70 && currentScreen !== 'home') setCurrentScreen('home')
     touchStartY.current = null
   }
 
-  // Chargement initial
   if (loading) {
     return (
       <div className="phone" style={{ alignItems: 'center', justifyContent: 'center' }}>
@@ -40,25 +38,23 @@ export default function App() {
     )
   }
 
-  // Pas de compte → écran de login du TÉLÉPHONE (pas d'Instagrim)
-  if (!user) {
-    return <PhoneLoginScreen />
+  if (!user) return <PhoneLoginScreen />
+
+  if (mode === 'desktop') {
+    return <DesktopMode onSwitchToPhone={() => setMode('phone')} />
   }
 
   const Screen = SCREENS[currentScreen] ?? HomeScreen
 
   return (
-    <div
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-      style={{ display: 'contents' }}
-    >
+    <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} style={{ display: 'contents' }}>
       <Screen
         onOpenApp={appId => {
           if (SCREENS[appId]) setCurrentScreen(appId)
           else alert('Cette app arrive bientôt !')
         }}
         onBack={() => setCurrentScreen('home')}
+        onSwitchToDesktop={() => setMode('desktop')}
       />
     </div>
   )
