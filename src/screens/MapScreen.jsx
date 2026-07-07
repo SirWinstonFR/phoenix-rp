@@ -22,11 +22,18 @@ export default function MapScreen({ onBack }) {
   const [newLocation, setNewLocation] = useState({ name: '', description: '', icon: '📍', color: '#b96eff' })
   const [pendingCoords, setPendingCoords] = useState(null)
   const [loading, setLoading]         = useState(true)
-  const [infoPopup, setInfoPopup]         = useState(null)
-  const [selectedLocation, setSelectedLocation] = useState(null) // fiche lieu Google Maps style
-  const [locationPlayers, setLocationPlayers]   = useState([])   // joueurs dans ce lieu
-  const [showAdmin, setShowAdmin]     = useState(false)
-  const [unplacedLocs, setUnplacedLocs] = useState([])
+  const [infoPopup, setInfoPopup]               = useState(null)
+  const [selectedLocation, setSelectedLocation] = useState(null)
+  const [locationPlayers, setLocationPlayers]   = useState([])
+  const [reviews, setReviews]                   = useState([])
+  const [showAdmin, setShowAdmin]               = useState(false)
+  const [unplacedLocs, setUnplacedLocs]         = useState([])
+  const [editingDesc, setEditingDesc]           = useState(false)
+  const [editDesc, setEditDesc]                 = useState('')
+  const [showAddReview, setShowAddReview]       = useState(false)
+  const [newReview, setNewReview]               = useState({ content: '', type: 'joueur', author_name: '', rating: 5 })
+  const [hoveredPlayer, setHoveredPlayer]       = useState(null)
+  const [shareToast, setShareToast]             = useState(false)
 
   // Seul le MJ peut voir la vue admin
   const MJ_DISCORD_ID = '804959890291294209'
@@ -261,23 +268,84 @@ export default function MapScreen({ onBack }) {
 
   async function openLocationSheet(loc) {
     setSelectedLocation(loc)
-    // Trouver les joueurs actuellement dans ce lieu
+    setEditingDesc(false)
+    setShowAddReview(false)
+    setNewReview({ content: '', type: 'joueur', author_name: profile?.username ?? '', rating: 5 })
+
+    // Joueurs proches
     if (loc.lat && loc.lng) {
       const { data } = await supabase
         .from('profiles')
         .select('id, username, initials, avatar_color, avatar_url, map_lat, map_lng')
         .eq('map_visible', true)
         .not('map_lat', 'is', null)
-      // Filtrer les joueurs proches du lieu (rayon ~200m)
       const nearby = (data ?? []).filter(p => {
         const dist = Math.sqrt(
           Math.pow((p.map_lat - loc.lat) * 111000, 2) +
           Math.pow((p.map_lng - loc.lng) * 111000 * Math.cos(loc.lat * Math.PI / 180), 2)
         )
-        return dist < 500 // moins de 500 mètres
+        return dist < 500
       })
       setLocationPlayers(nearby)
     }
+
+    // Générer un téléphone fixe si pas encore fait
+    if (!loc.phone) {
+      const phone = generatePhone()
+      await supabase.from('map_locations').update({ phone }).eq('id', loc.id)
+      setSelectedLocation(prev => ({ ...prev, phone }))
+    }
+
+    // Charger les avis
+    const { data: reviewsData } = await supabase
+      .from('location_reviews')
+      .select('*')
+      .eq('location_id', loc.id)
+      .order('created_at', { ascending: false })
+    setReviews(reviewsData ?? [])
+  }
+
+  function generatePhone() {
+    const area = Math.floor(Math.random() * 900) + 100
+    const mid  = Math.floor(Math.random() * 900) + 100
+    const end  = Math.floor(Math.random() * 9000) + 1000
+    return `(${area}) ${mid}-${end}`
+  }
+
+  async function saveDescription() {
+    await supabase.from('map_locations').update({ description: editDesc }).eq('id', selectedLocation.id)
+    setSelectedLocation(prev => ({ ...prev, description: editDesc }))
+    setEditingDesc(false)
+    fetchLocations()
+  }
+
+  async function addReview() {
+    if (!newReview.content.trim()) return
+    const authorName = newReview.type === 'pnj' ? newReview.author_name : (profile?.username ?? 'Joueur')
+    await supabase.from('location_reviews').insert({
+      location_id:  selectedLocation.id,
+      user_id:      user.id,
+      author_name:  authorName,
+      content:      newReview.content.trim(),
+      type:         newReview.type,
+      rating:       newReview.rating,
+    })
+    setShowAddReview(false)
+    setNewReview({ content: '', type: 'joueur', author_name: '', rating: 5 })
+    const { data } = await supabase.from('location_reviews').select('*').eq('location_id', selectedLocation.id).order('created_at', { ascending: false })
+    setReviews(data ?? [])
+  }
+
+  async function deleteReview(id) {
+    await supabase.from('location_reviews').delete().eq('id', id)
+    setReviews(prev => prev.filter(r => r.id !== id))
+  }
+
+  function shareLocation() {
+    const text = `📍 ${selectedLocation.name} — Phoenix RP`
+    navigator.clipboard?.writeText(text)
+    setShareToast(true)
+    setTimeout(() => setShareToast(false), 2000)
   }
 
   async function placeUnplacedLocation(loc) {
@@ -647,84 +715,221 @@ export default function MapScreen({ onBack }) {
             </div>
 
             {/* Contenu */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 0 }}>
 
-              {/* Nom + couleur */}
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                  <div style={{
-                    width: 10, height: 10, borderRadius: '50%',
-                    background: selectedLocation.color ?? '#b96eff',
-                    flexShrink: 0,
-                  }} />
-                  <h2 style={{ fontSize: 17, fontWeight: 800, color: 'var(--t1)', lineHeight: 1.2 }}>
+              {/* Infos principales */}
+              <div style={{ padding: '14px 16px 12px', borderBottom: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                  <div style={{ width: 10, height: 10, borderRadius: '50%', background: selectedLocation.color ?? '#b96eff', flexShrink: 0 }} />
+                  <h2 style={{ fontSize: 17, fontWeight: 800, color: 'var(--t1)', lineHeight: 1.2, flex: 1 }}>
                     {selectedLocation.name}
                   </h2>
                 </div>
                 {selectedLocation.discord_channel && (
-                  <p style={{ fontSize: 11, color: 'var(--t3)', marginLeft: 18 }}>
-                    #{selectedLocation.discord_channel}
+                  <p style={{ fontSize: 11, color: 'var(--t3)', marginLeft: 18, marginBottom: 8 }}>#{selectedLocation.discord_channel}</p>
+                )}
+
+                {/* Téléphone */}
+                {selectedLocation.phone && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                    <span style={{ fontSize: 14 }}>📞</span>
+                    <p style={{ fontSize: 13, color: 'var(--t2)', fontFamily: 'monospace' }}>{selectedLocation.phone}</p>
+                  </div>
+                )}
+
+                {/* Boutons actions */}
+                <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+                  <button onClick={shareLocation} style={{
+                    flex: 1, padding: '7px 0', borderRadius: 10,
+                    background: 'var(--glass)', border: '1px solid var(--border)',
+                    color: 'var(--t1)', fontSize: 11, fontWeight: 600,
+                    cursor: 'pointer', fontFamily: 'inherit',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                  }}>
+                    🔗 Partager
+                  </button>
+                  <button onClick={() => { setShowAddReview(!showAddReview) }} style={{
+                    flex: 1, padding: '7px 0', borderRadius: 10,
+                    background: 'var(--glass)', border: '1px solid var(--border)',
+                    color: 'var(--t1)', fontSize: 11, fontWeight: 600,
+                    cursor: 'pointer', fontFamily: 'inherit',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                  }}>
+                    ✍️ Avis
+                  </button>
+                </div>
+              </div>
+
+              {/* Description */}
+              <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Description</p>
+                  {isMJ && !editingDesc && (
+                    <button onClick={() => { setEditDesc(selectedLocation.description ?? ''); setEditingDesc(true) }} style={{
+                      background: 'none', border: 'none', color: 'var(--accent)', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit',
+                    }}>✏️ Modifier</button>
+                  )}
+                </div>
+                {editingDesc ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <textarea
+                      value={editDesc}
+                      onChange={e => setEditDesc(e.target.value)}
+                      placeholder="Décris ce lieu..."
+                      style={{
+                        width: '100%', height: 80, resize: 'none',
+                        background: 'var(--bg3)', border: '1px solid var(--border2)',
+                        borderRadius: 10, padding: '8px 10px',
+                        color: 'var(--t1)', fontSize: 12, fontFamily: 'inherit',
+                        outline: 'none',
+                      }}
+                    />
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button onClick={saveDescription} className="btn-primary" style={{ flex: 1, padding: '7px', fontSize: 12 }}>Sauvegarder</button>
+                      <button onClick={() => setEditingDesc(false)} style={{ padding: '7px 12px', background: 'var(--glass)', border: '1px solid var(--border)', borderRadius: 10, color: 'var(--t2)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>Annuler</button>
+                    </div>
+                  </div>
+                ) : (
+                  <p style={{ fontSize: 12, color: selectedLocation.description ? 'var(--t2)' : 'var(--t3)', lineHeight: 1.6, fontStyle: selectedLocation.description ? 'normal' : 'italic' }}>
+                    {selectedLocation.description || 'Aucune description.'}
                   </p>
                 )}
               </div>
 
-              {/* Description */}
-              {selectedLocation.description && (
-                <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12 }}>
-                  <p style={{ fontSize: 12, color: 'var(--t2)', lineHeight: 1.6 }}>
-                    {selectedLocation.description}
-                  </p>
-                </div>
-              )}
-
               {/* Joueurs présents */}
-              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+              <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
                 <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
                   {locationPlayers.length > 0 ? `${locationPlayers.length} joueur${locationPlayers.length > 1 ? 's' : ''} ici` : 'Aucun joueur ici'}
                 </p>
-
                 {locationPlayers.length > 0 && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, position: 'relative' }}>
                     {locationPlayers.map(p => (
-                      <div
-                        key={p.id}
-                        title={p.username}
-                        style={{
-                          width: 36, height: 36, borderRadius: '50%',
-                          background: p.avatar_color ?? '#555',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: 12, fontWeight: 700, color: '#fff',
-                          overflow: 'hidden', cursor: 'pointer',
-                          border: p.id === user?.id ? '2px solid var(--accent)' : '2px solid transparent',
-                          position: 'relative',
-                          flexShrink: 0,
-                        }}
-                      >
-                        {p.avatar_url
-                          ? <img src={p.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          : p.initials ?? '?'
-                        }
+                      <div key={p.id} style={{ position: 'relative' }}>
+                        <div
+                          onMouseEnter={() => setHoveredPlayer(p.id)}
+                          onMouseLeave={() => setHoveredPlayer(null)}
+                          style={{
+                            width: 36, height: 36, borderRadius: '50%',
+                            background: p.avatar_color ?? '#555',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: 12, fontWeight: 700, color: '#fff',
+                            overflow: 'hidden', cursor: 'default',
+                            border: p.id === user?.id ? '2px solid var(--accent)' : '2px solid transparent',
+                          }}
+                        >
+                          {p.avatar_url
+                            ? <img src={p.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            : p.initials ?? '?'
+                          }
+                        </div>
+                        {hoveredPlayer === p.id && (
+                          <div style={{
+                            position: 'absolute', bottom: '110%', left: '50%', transform: 'translateX(-50%)',
+                            background: 'rgba(0,0,0,0.85)', color: '#fff',
+                            fontSize: 11, fontWeight: 600, padding: '4px 8px',
+                            borderRadius: 8, whiteSpace: 'nowrap', zIndex: 10,
+                            pointerEvents: 'none',
+                          }}>
+                            {p.id === user?.id ? 'Toi' : p.username}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
                 )}
               </div>
 
-              {/* Actions MJ */}
-              {isMJ && (
-                <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Admin MJ</p>
+              {/* Formulaire avis */}
+              {showAddReview && (
+                <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', background: 'var(--bg2)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--t1)' }}>Laisser un avis</p>
 
-                  {/* Upload image de couverture */}
-                  <label style={{
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    padding: '8px 12px', borderRadius: 10,
-                    background: 'var(--glass)', border: '1px solid var(--border)',
-                    cursor: 'pointer', fontSize: 12, color: 'var(--t2)',
-                  }}>
-                    🖼️ {selectedLocation.cover_url ? 'Changer la couverture' : 'Ajouter une couverture'}
+                  {/* Type joueur/PNJ */}
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {['joueur', 'pnj'].map(t => (
+                      <button key={t} onClick={() => setNewReview(p => ({ ...p, type: t }))} style={{
+                        flex: 1, padding: '6px', borderRadius: 8, fontSize: 11, fontWeight: 600,
+                        cursor: 'pointer', fontFamily: 'inherit',
+                        background: newReview.type === t ? 'var(--accent)' : 'var(--glass)',
+                        border: `1px solid ${newReview.type === t ? 'var(--accent)' : 'var(--border)'}`,
+                        color: newReview.type === t ? '#fff' : 'var(--t2)',
+                      }}>
+                        {t === 'joueur' ? '👤 Joueur' : '🎭 PNJ'}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Nom PNJ */}
+                  {newReview.type === 'pnj' && (
                     <input
-                      type="file" accept="image/*" style={{ display: 'none' }}
+                      placeholder="Nom du PNJ"
+                      value={newReview.author_name}
+                      onChange={e => setNewReview(p => ({ ...p, author_name: e.target.value }))}
+                      style={{ border: '1px solid var(--border2)', borderRadius: 8, padding: '7px 10px', background: 'var(--bg3)', color: 'var(--t1)', fontSize: 12, fontFamily: 'inherit', outline: 'none' }}
+                    />
+                  )}
+
+                  {/* Note */}
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    {[1,2,3,4,5].map(n => (
+                      <span key={n} onClick={() => setNewReview(p => ({ ...p, rating: n }))}
+                        style={{ fontSize: 18, cursor: 'pointer', opacity: n <= newReview.rating ? 1 : 0.3 }}>⭐</span>
+                    ))}
+                  </div>
+
+                  {/* Texte */}
+                  <textarea
+                    placeholder="Ton avis sur ce lieu..."
+                    value={newReview.content}
+                    onChange={e => setNewReview(p => ({ ...p, content: e.target.value }))}
+                    style={{ width: '100%', height: 70, resize: 'none', background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 8, padding: '8px 10px', color: 'var(--t1)', fontSize: 12, fontFamily: 'inherit', outline: 'none' }}
+                  />
+
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button onClick={addReview} className="btn-primary" style={{ flex: 1, padding: '7px', fontSize: 12 }}>Publier</button>
+                    <button onClick={() => setShowAddReview(false)} style={{ padding: '7px 12px', background: 'var(--glass)', border: '1px solid var(--border)', borderRadius: 10, color: 'var(--t2)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>Annuler</button>
+                  </div>
+                </div>
+              )}
+
+              {/* Avis */}
+              {reviews.length > 0 && (
+                <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+                    Avis ({reviews.length})
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {reviews.map(r => (
+                      <div key={r.id} style={{ background: 'var(--bg2)', borderRadius: 12, padding: '10px 12px', border: '1px solid var(--border)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ fontSize: 12 }}>{r.type === 'pnj' ? '🎭' : '👤'}</span>
+                            <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--t1)' }}>{r.author_name}</p>
+                            {r.type === 'pnj' && (
+                              <span style={{ fontSize: 9, fontWeight: 700, background: 'rgba(185,110,255,0.2)', color: 'var(--accent)', padding: '1px 5px', borderRadius: 4 }}>PNJ</span>
+                            )}
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ fontSize: 10, color: 'var(--t3)' }}>{'⭐'.repeat(r.rating)}</span>
+                            {(r.user_id === user?.id || isMJ) && (
+                              <button onClick={() => deleteReview(r.id)} style={{ background: 'none', border: 'none', color: 'var(--danger)', fontSize: 12, cursor: 'pointer', padding: 0 }}>🗑️</button>
+                            )}
+                          </div>
+                        </div>
+                        <p style={{ fontSize: 12, color: 'var(--t2)', lineHeight: 1.5 }}>{r.content}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Admin MJ */}
+              {isMJ && (
+                <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Admin MJ</p>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 10, background: 'var(--glass)', border: '1px solid var(--border)', cursor: 'pointer', fontSize: 12, color: 'var(--t2)' }}>
+                    🖼️ {selectedLocation.cover_url ? 'Changer la couverture' : 'Ajouter une couverture'}
+                    <input type="file" accept="image/*" style={{ display: 'none' }}
                       onChange={async e => {
                         const file = e.target.files[0]
                         if (!file) return
@@ -733,27 +938,34 @@ export default function MapScreen({ onBack }) {
                         const { error: upErr } = await supabase.storage.from('post-images').upload(path, file, { upsert: true })
                         if (upErr) return
                         const { data: urlData } = supabase.storage.from('post-images').getPublicUrl(path)
-                        await supabase.from('map_locations').update({ cover_url: urlData.publicUrl + '?t=' + Date.now() }).eq('id', selectedLocation.id)
-                        setSelectedLocation(prev => ({ ...prev, cover_url: urlData.publicUrl + '?t=' + Date.now() }))
+                        const url = urlData.publicUrl + '?t=' + Date.now()
+                        await supabase.from('map_locations').update({ cover_url: url }).eq('id', selectedLocation.id)
+                        setSelectedLocation(prev => ({ ...prev, cover_url: url }))
                         fetchLocations()
                       }}
                     />
                   </label>
-
-                  <button
-                    onClick={() => { deleteLocation(selectedLocation.id); setSelectedLocation(null) }}
-                    style={{
-                      padding: '8px 12px', borderRadius: 10,
-                      background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)',
-                      color: 'var(--danger)', fontSize: 12, fontWeight: 600,
-                      cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
-                    }}
-                  >
+                  <button onClick={() => { deleteLocation(selectedLocation.id); setSelectedLocation(null) }} style={{ padding: '8px 12px', borderRadius: 10, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: 'var(--danger)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
                     🗑️ Supprimer ce lieu
                   </button>
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {/* Toast partage */}
+        {shareToast && (
+          <div style={{
+            position: 'absolute', bottom: 80, left: '50%', transform: 'translateX(-50%)',
+            background: 'var(--bg3)', border: '1px solid var(--border)',
+            borderRadius: 12, padding: '10px 18px',
+            fontSize: 13, fontWeight: 600, color: 'var(--t1)',
+            zIndex: 200, boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+            animation: 'fadeDown 0.2s ease',
+            whiteSpace: 'nowrap',
+          }}>
+            ✅ Nom du lieu copié !
           </div>
         )}
 
