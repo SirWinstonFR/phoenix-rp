@@ -66,7 +66,11 @@ export default function DesktopWindow({
 
   if (minimized) return null
 
-  const style = maximized ? {} : {
+  const style = maximized ? {
+    top: 0, left: 0,
+    width: '100%',
+    height: 'calc(100vh - 44px)',
+  } : {
     left: pos.x, top: pos.y,
     width: size.w, height: size.h,
   }

@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useAuth } from './context/AuthContext'
 import PhoneLoginScreen from './screens/PhoneLoginScreen'
 import HomeScreen from './screens/HomeScreen'
@@ -15,8 +15,16 @@ const SCREENS = {
 export default function App() {
   const { user, loading } = useAuth()
   const [currentScreen, setCurrentScreen] = useState('home')
-  const [mode, setMode] = useState('phone')
+  const [mode, setMode] = useState(() => {
+    // Lire le mode choisi avant la redirection Discord
+    return localStorage.getItem('rp_mode') ?? 'phone'
+  })
   const touchStartY = useRef(null)
+
+  useEffect(() => {
+    // Nettoyer après lecture
+    localStorage.removeItem('rp_mode')
+  }, [])
 
   function handleTouchStart(e) {
     touchStartY.current = e.touches[0].clientY
@@ -31,9 +39,14 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="phone" style={{ alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{
+        width: '100vw', height: '100vh',
+        background: '#080810',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        flexDirection: 'column', gap: 16,
+      }}>
         <div className="spinner" />
-        <p style={{ color: 'var(--t3)', fontSize: 12, marginTop: 12 }}>Chargement…</p>
+        <p style={{ color: '#333', fontSize: 12, fontFamily: 'Inter, sans-serif' }}>Chargement…</p>
       </div>
     )
   }
