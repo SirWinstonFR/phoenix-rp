@@ -3,13 +3,8 @@ import { supabase } from '../supabase'
 import { useAuth } from '../context/AuthContext'
 import StatusBar from '../components/StatusBar'
 
-// Styles Mapbox disponibles
-const MAP_STYLES = [
-  { id: 'dark',      label: '🌑 Sombre',    url: 'mapbox://styles/mapbox/dark-v11' },
-  { id: 'satellite', label: '🛸 Satellite', url: 'mapbox://styles/mapbox/satellite-streets-v12' },
-  { id: 'streets',   label: '🗺️ Rues',      url: 'mapbox://styles/mapbox/streets-v12' },
-  { id: 'outdoors',  label: '🏔️ Relief',    url: 'mapbox://styles/mapbox/outdoors-v12' },
-]
+// Style unique : Relief
+const MAP_STYLE = 'mapbox://styles/mapbox/outdoors-v12'
 
 // Centre : Phoenix, Arizona
 const PHOENIX = { lat: 33.4484, lng: -112.0740 }
@@ -22,7 +17,6 @@ export default function MapScreen({ onBack }) {
 
   const [players, setPlayers]         = useState([])
   const [locations, setLocations]     = useState([])
-  const [styleIndex, setStyleIndex]   = useState(0)
   const [showStylePicker, setShowStylePicker] = useState(false)
   const [showAddLocation, setShowAddLocation] = useState(false)
   const [newLocation, setNewLocation] = useState({ name: '', description: '', icon: '📍', color: '#b96eff' })
@@ -65,7 +59,7 @@ export default function MapScreen({ onBack }) {
 
     const map = new mapboxgl.Map({
       container: mapContainer.current,
-      style: MAP_STYLES[0].url,
+      style: MAP_STYLE,
       center: [PHOENIX.lng, PHOENIX.lat],
       zoom: 11,
       attributionControl: false,
@@ -271,17 +265,6 @@ export default function MapScreen({ onBack }) {
     fetchLocations()
   }
 
-  function changeStyle(index) {
-    setStyleIndex(index)
-    setShowStylePicker(false)
-    mapRef.current?.setStyle(MAP_STYLES[index].url)
-    // Réappliquer les marqueurs après changement de style
-    setTimeout(() => {
-      updatePlayerMarkers(players)
-      updateLocationMarkers(locations)
-    }, 500)
-  }
-
   function centerOnMe() {
     if (!profile?.map_lat || !mapRef.current) return
     mapRef.current.flyTo({
@@ -324,7 +307,7 @@ export default function MapScreen({ onBack }) {
                 </span>
               </button>
             )}
-            <button className="icon-btn" onClick={() => { setShowStylePicker(!showStylePicker); setShowAdmin(false) }}>🎨</button>
+            <button className="icon-btn" onClick={() => { setShowStylePicker(!showStylePicker); setShowAdmin(false) }}>🗺️</button>
           </div>
         </div>
 
@@ -400,29 +383,6 @@ export default function MapScreen({ onBack }) {
                   🗑️
                 </button>
               </div>
-            ))}
-          </div>
-        )}
-
-        {/* Sélecteur de style */}
-        {showStylePicker && (
-          <div style={{
-            position: 'absolute', top: 52, right: 10, zIndex: 100,
-            background: 'var(--bg3)', border: '1px solid var(--border)',
-            borderRadius: 14, overflow: 'hidden',
-            boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
-          }}>
-            {MAP_STYLES.map((s, i) => (
-              <button key={s.id} onClick={() => changeStyle(i)} style={{
-                width: '100%', padding: '10px 16px',
-                background: i === styleIndex ? 'var(--glass2)' : 'none',
-                border: 'none', color: i === styleIndex ? 'var(--accent)' : 'var(--t1)',
-                fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                textAlign: 'left', fontFamily: 'inherit',
-                borderBottom: i < MAP_STYLES.length - 1 ? '1px solid var(--border)' : 'none',
-              }}>
-                {s.label}
-              </button>
             ))}
           </div>
         )}
