@@ -29,6 +29,12 @@ export default function MapScreen({ onBack }) {
   const [pendingCoords, setPendingCoords] = useState(null)
   const [loading, setLoading]         = useState(true)
   const [infoPopup, setInfoPopup]     = useState(null)
+  const [showAdmin, setShowAdmin]     = useState(false)
+  const [unplacedLocs, setUnplacedLocs] = useState([])
+
+  // Seul le MJ peut voir la vue admin
+  const MJ_DISCORD_ID = '804959890291294209'
+  const isMJ = profile?.discord_id === MJ_DISCORD_ID
 
   useEffect(() => {
     initMap()
@@ -112,8 +118,13 @@ export default function MapScreen({ onBack }) {
       .from('map_locations')
       .select('*')
       .order('created_at', { ascending: true })
-    setLocations(data ?? [])
-    updateLocationMarkers(data ?? [])
+
+    const placed   = (data ?? []).filter(l => l.lat !== null && l.lng !== null)
+    const unplaced = (data ?? []).filter(l => l.lat === null || l.lng === null)
+
+    setLocations(placed)
+    setUnplacedLocs(unplaced)
+    updateLocationMarkers(placed)
   }
 
   function updatePlayerMarkers(players) {
@@ -243,6 +254,17 @@ export default function MapScreen({ onBack }) {
     fetchLocations()
   }
 
+  async function placeUnplacedLocation(loc) {
+    if (!pendingCoords) return
+    await supabase
+      .from('map_locations')
+      .update({ lat: pendingCoords.lat, lng: pendingCoords.lng })
+      .eq('id', loc.id)
+    setPendingCoords(null)
+    setShowAdmin(false)
+    fetchLocations()
+  }
+
   async function deleteLocation(id) {
     await supabase.from('map_locations').delete().eq('id', id)
     setInfoPopup(null)
@@ -276,8 +298,111 @@ export default function MapScreen({ onBack }) {
         <div className="app-header">
           <button className="icon-btn" onClick={onBack}>←</button>
           <span className="app-header-title">Carte</span>
-          <button className="icon-btn" onClick={() => setShowStylePicker(!showStylePicker)}>🎨</button>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            {isMJ && unplacedLocs.length > 0 && (
+              <button
+                onClick={() => { setShowAdmin(!showAdmin); setShowStylePicker(false) }}
+                style={{
+                  position: 'relative',
+                  background: showAdmin ? 'var(--accent)' : 'var(--glass2)',
+                  border: '1px solid var(--border2)',
+                  borderRadius: 10, padding: '5px 10px',
+                  color: showAdmin ? '#fff' : 'var(--t1)',
+                  fontSize: 12, fontWeight: 700,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                  display: 'flex', alignItems: 'center', gap: 5,
+                }}
+              >
+                🏛️ À placer
+                <span style={{
+                  background: 'var(--danger)', color: '#fff',
+                  borderRadius: '50%', width: 16, height: 16,
+                  fontSize: 9, fontWeight: 800,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  {unplacedLocs.length}
+                </span>
+              </button>
+            )}
+            <button className="icon-btn" onClick={() => { setShowStylePicker(!showStylePicker); setShowAdmin(false) }}>🎨</button>
+          </div>
         </div>
+
+        {/* Panneau admin — visible MJ uniquement */}
+        {isMJ && showAdmin && unplacedLocs.length > 0 && (
+          <div style={{
+            position: 'absolute', top: 52, left: 0, right: 0,
+            background: 'var(--bg2)', border: '1px solid var(--border)',
+            borderRadius: '0 0 20px 20px', zIndex: 100,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+            maxHeight: 280, overflowY: 'auto',
+          }}>
+            <div style={{ padding: '12px 16px 8px', borderBottom: '1px solid var(--border)' }}>
+              <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--t1)' }}>
+                🏛️ Lieux à placer sur la carte
+              </p>
+              <p style={{ fontSize: 11, color: 'var(--t3)', marginTop: 3 }}>
+                {pendingCoords
+                  ? '👆 Maintenant clique sur un lieu ci-dessous pour le placer ici'
+                  : 'Clique d\'abord sur la carte pour choisir un emplacement'}
+              </p>
+            </div>
+
+            {unplacedLocs.map(loc => (
+              <div
+                key={loc.id}
+                onClick={() => pendingCoords && placeUnplacedLocation(loc)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '10px 16px',
+                  borderBottom: '1px solid var(--border)',
+                  cursor: pendingCoords ? 'pointer' : 'default',
+                  background: pendingCoords ? 'var(--glass)' : 'transparent',
+                  transition: 'background 0.15s',
+                  opacity: pendingCoords ? 1 : 0.6,
+                }}
+                onMouseEnter={e => pendingCoords && (e.currentTarget.style.background = 'var(--glass2)')}
+                onMouseLeave={e => pendingCoords && (e.currentTarget.style.background = 'var(--glass)')}
+              >
+                <div style={{
+                  width: 36, height: 36, borderRadius: '50%',
+                  background: loc.color ?? 'var(--accent)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 18, flexShrink: 0,
+                }}>
+                  {loc.icon ?? '📍'}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--t1)' }}>{loc.name}</p>
+                  {loc.discord_channel && (
+                    <p style={{ fontSize: 11, color: 'var(--t3)' }}>#{loc.discord_channel}</p>
+                  )}
+                  {loc.description && (
+                    <p style={{ fontSize: 11, color: 'var(--t2)', marginTop: 2 }}>{loc.description}</p>
+                  )}
+                </div>
+                {pendingCoords && (
+                  <span style={{
+                    fontSize: 11, fontWeight: 700,
+                    color: 'var(--accent)', flexShrink: 0,
+                  }}>
+                    Placer ici →
+                  </span>
+                )}
+                <button
+                  onClick={e => { e.stopPropagation(); deleteLocation(loc.id) }}
+                  style={{
+                    background: 'none', border: 'none',
+                    color: 'var(--danger)', fontSize: 14,
+                    cursor: 'pointer', padding: 4, flexShrink: 0,
+                  }}
+                >
+                  🗑️
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Sélecteur de style */}
         {showStylePicker && (
