@@ -22,7 +22,9 @@ export default function MapScreen({ onBack }) {
   const [newLocation, setNewLocation] = useState({ name: '', description: '', icon: '📍', color: '#b96eff' })
   const [pendingCoords, setPendingCoords] = useState(null)
   const [loading, setLoading]         = useState(true)
-  const [infoPopup, setInfoPopup]     = useState(null)
+  const [infoPopup, setInfoPopup]         = useState(null)
+  const [selectedLocation, setSelectedLocation] = useState(null) // fiche lieu Google Maps style
+  const [locationPlayers, setLocationPlayers]   = useState([])   // joueurs dans ce lieu
   const [showAdmin, setShowAdmin]     = useState(false)
   const [unplacedLocs, setUnplacedLocs] = useState([])
 
@@ -222,7 +224,7 @@ export default function MapScreen({ onBack }) {
 
       wrapper.addEventListener('click', e => {
         e.stopPropagation()
-        setInfoPopup({ type: 'location', data: loc })
+        openLocationSheet(loc)
       })
 
       const marker = new window.mapboxgl.Marker({ element: wrapper, anchor: 'bottom' })
@@ -255,6 +257,27 @@ export default function MapScreen({ onBack }) {
     setNewLocation({ name: '', description: '', icon: '📍', color: '#b96eff' })
     setPendingCoords(null)
     fetchLocations()
+  }
+
+  async function openLocationSheet(loc) {
+    setSelectedLocation(loc)
+    // Trouver les joueurs actuellement dans ce lieu
+    if (loc.lat && loc.lng) {
+      const { data } = await supabase
+        .from('profiles')
+        .select('id, username, initials, avatar_color, avatar_url, map_lat, map_lng')
+        .eq('map_visible', true)
+        .not('map_lat', 'is', null)
+      // Filtrer les joueurs proches du lieu (rayon ~200m)
+      const nearby = (data ?? []).filter(p => {
+        const dist = Math.sqrt(
+          Math.pow((p.map_lat - loc.lat) * 111000, 2) +
+          Math.pow((p.map_lng - loc.lng) * 111000 * Math.cos(loc.lat * Math.PI / 180), 2)
+        )
+        return dist < 500 // moins de 500 mètres
+      })
+      setLocationPlayers(nearby)
+    }
   }
 
   async function placeUnplacedLocation(loc) {
@@ -546,58 +569,190 @@ export default function MapScreen({ onBack }) {
           </div>
         )}
 
-        {/* Popup info joueur/lieu */}
-        {infoPopup && (
+        {/* Popup joueur (simple, en haut) */}
+        {infoPopup?.type === 'player' && (
           <div style={{
             position: 'absolute', top: 60, left: '50%', transform: 'translateX(-50%)',
             background: 'var(--bg3)', border: '1px solid var(--border)',
-            borderRadius: 16, padding: '14px 16px', zIndex: 60,
-            minWidth: 200, boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+            borderRadius: 16, padding: '12px 16px', zIndex: 60,
+            minWidth: 180, boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
             animation: 'fadeDown 0.2s ease',
+            display: 'flex', alignItems: 'center', gap: 10,
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: '50%',
+              background: infoPopup.data.avatar_color ?? '#555',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 13, fontWeight: 700, color: '#fff', flexShrink: 0,
+              overflow: 'hidden',
+            }}>
+              {infoPopup.data.avatar_url
+                ? <img src={infoPopup.data.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : infoPopup.data.initials
+              }
+            </div>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--t1)' }}>
+                {infoPopup.data.id === user?.id ? 'Toi' : infoPopup.data.username}
+              </p>
+              <p style={{ fontSize: 11, color: 'var(--t3)' }}>Joueur actif</p>
+            </div>
+            <button onClick={() => setInfoPopup(null)} style={{ background: 'none', border: 'none', color: 'var(--t3)', fontSize: 16, cursor: 'pointer' }}>✕</button>
+          </div>
+        )}
+
+        {/* Panneau latéral gauche — Fiche lieu style Google Maps */}
+        {selectedLocation && (
+          <div style={{
+            position: 'absolute', top: 0, left: 0, bottom: 0,
+            width: 260,
+            background: 'rgba(10,10,18,0.97)',
+            borderRight: '1px solid var(--border)',
+            zIndex: 60,
+            display: 'flex', flexDirection: 'column',
+            boxShadow: '4px 0 24px rgba(0,0,0,0.6)',
+            animation: 'slideInLeft 0.3s cubic-bezier(0.22,1,0.36,1)',
+            backdropFilter: 'blur(20px)',
+          }}>
+
+            {/* Image de couverture */}
+            <div style={{
+              width: '100%', height: 140,
+              background: selectedLocation.cover_url
+                ? `url(${selectedLocation.cover_url}) center/cover`
+                : `linear-gradient(135deg, ${selectedLocation.color ?? '#b96eff'}44, ${selectedLocation.color ?? '#7b9fff'}22)`,
+              position: 'relative', flexShrink: 0,
+            }}>
+              {/* Bouton fermer */}
+              <button
+                onClick={() => { setSelectedLocation(null); setLocationPlayers([]) }}
+                style={{
+                  position: 'absolute', top: 10, right: 10,
+                  width: 28, height: 28, borderRadius: '50%',
+                  background: 'rgba(0,0,0,0.6)', border: 'none',
+                  color: '#fff', fontSize: 14, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >✕</button>
+
+              {/* Icône du lieu */}
+              {!selectedLocation.cover_url && (
+                <div style={{
+                  position: 'absolute', bottom: 12, left: 16,
+                  fontSize: 40,
+                }}>
+                  {selectedLocation.icon ?? '📍'}
+                </div>
+              )}
+            </div>
+
+            {/* Contenu */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+              {/* Nom + couleur */}
               <div>
-                {infoPopup.type === 'player' ? (
-                  <>
-                    <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--t1)' }}>
-                      {infoPopup.data.id === user?.id ? '👤 Toi' : `👤 ${infoPopup.data.username}`}
-                    </p>
-                    <p style={{ fontSize: 12, color: 'var(--t3)', marginTop: 4 }}>
-                      Joueur actif sur la carte
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--t1)' }}>
-                      {infoPopup.data.icon} {infoPopup.data.name}
-                    </p>
-                    {infoPopup.data.description && (
-                      <p style={{ fontSize: 12, color: 'var(--t2)', marginTop: 4, lineHeight: 1.4 }}>
-                        {infoPopup.data.description}
-                      </p>
-                    )}
-                    {infoPopup.data.created_by === user?.id && (
-                      <button
-                        onClick={() => deleteLocation(infoPopup.data.id)}
-                        style={{
-                          marginTop: 8, background: 'rgba(239,68,68,0.1)',
-                          border: '1px solid rgba(239,68,68,0.2)',
-                          borderRadius: 8, padding: '4px 10px',
-                          color: 'var(--danger)', fontSize: 11,
-                          fontWeight: 600, cursor: 'pointer',
-                          fontFamily: 'inherit',
-                        }}
-                      >
-                        🗑️ Supprimer
-                      </button>
-                    )}
-                  </>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                  <div style={{
+                    width: 10, height: 10, borderRadius: '50%',
+                    background: selectedLocation.color ?? '#b96eff',
+                    flexShrink: 0,
+                  }} />
+                  <h2 style={{ fontSize: 17, fontWeight: 800, color: 'var(--t1)', lineHeight: 1.2 }}>
+                    {selectedLocation.name}
+                  </h2>
+                </div>
+                {selectedLocation.discord_channel && (
+                  <p style={{ fontSize: 11, color: 'var(--t3)', marginLeft: 18 }}>
+                    #{selectedLocation.discord_channel}
+                  </p>
                 )}
               </div>
-              <button onClick={() => setInfoPopup(null)} style={{
-                background: 'none', border: 'none',
-                color: 'var(--t3)', fontSize: 18, cursor: 'pointer', padding: 0,
-              }}>✕</button>
+
+              {/* Description */}
+              {selectedLocation.description && (
+                <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+                  <p style={{ fontSize: 12, color: 'var(--t2)', lineHeight: 1.6 }}>
+                    {selectedLocation.description}
+                  </p>
+                </div>
+              )}
+
+              {/* Joueurs présents */}
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+                <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+                  {locationPlayers.length > 0 ? `${locationPlayers.length} joueur${locationPlayers.length > 1 ? 's' : ''} ici` : 'Aucun joueur ici'}
+                </p>
+
+                {locationPlayers.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {locationPlayers.map(p => (
+                      <div
+                        key={p.id}
+                        title={p.username}
+                        style={{
+                          width: 36, height: 36, borderRadius: '50%',
+                          background: p.avatar_color ?? '#555',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 12, fontWeight: 700, color: '#fff',
+                          overflow: 'hidden', cursor: 'pointer',
+                          border: p.id === user?.id ? '2px solid var(--accent)' : '2px solid transparent',
+                          position: 'relative',
+                          flexShrink: 0,
+                        }}
+                      >
+                        {p.avatar_url
+                          ? <img src={p.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          : p.initials ?? '?'
+                        }
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Actions MJ */}
+              {isMJ && (
+                <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Admin MJ</p>
+
+                  {/* Upload image de couverture */}
+                  <label style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '8px 12px', borderRadius: 10,
+                    background: 'var(--glass)', border: '1px solid var(--border)',
+                    cursor: 'pointer', fontSize: 12, color: 'var(--t2)',
+                  }}>
+                    🖼️ {selectedLocation.cover_url ? 'Changer la couverture' : 'Ajouter une couverture'}
+                    <input
+                      type="file" accept="image/*" style={{ display: 'none' }}
+                      onChange={async e => {
+                        const file = e.target.files[0]
+                        if (!file) return
+                        const ext = file.name.split('.').pop()
+                        const path = `covers/${selectedLocation.id}.${ext}`
+                        const { error: upErr } = await supabase.storage.from('post-images').upload(path, file, { upsert: true })
+                        if (upErr) return
+                        const { data: urlData } = supabase.storage.from('post-images').getPublicUrl(path)
+                        await supabase.from('map_locations').update({ cover_url: urlData.publicUrl + '?t=' + Date.now() }).eq('id', selectedLocation.id)
+                        setSelectedLocation(prev => ({ ...prev, cover_url: urlData.publicUrl + '?t=' + Date.now() }))
+                        fetchLocations()
+                      }}
+                    />
+                  </label>
+
+                  <button
+                    onClick={() => { deleteLocation(selectedLocation.id); setSelectedLocation(null) }}
+                    style={{
+                      padding: '8px 12px', borderRadius: 10,
+                      background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)',
+                      color: 'var(--danger)', fontSize: 12, fontWeight: 600,
+                      cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+                    }}
+                  >
+                    🗑️ Supprimer ce lieu
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -606,3 +761,4 @@ export default function MapScreen({ onBack }) {
     </div>
   )
 }
+
