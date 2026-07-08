@@ -669,254 +669,221 @@ export default function MapScreen({ onBack }) {
           </div>
         )}
 
-        {/* Panneau latéral gauche — Fiche lieu style Google Maps */}
+        {/* Panneau latéral gauche — Fiche lieu */}
         {selectedLocation && (
           <div style={{
             position: 'absolute', top: 0, left: 0, bottom: 0,
-            width: 260,
-            background: 'rgba(10,10,18,0.97)',
-            borderRight: '1px solid var(--border)',
-            zIndex: 60,
-            display: 'flex', flexDirection: 'column',
-            boxShadow: '4px 0 24px rgba(0,0,0,0.6)',
+            width: 280,
+            background: 'rgba(8,8,14,0.98)',
+            borderRight: '1px solid rgba(255,255,255,0.06)',
+            zIndex: 60, display: 'flex', flexDirection: 'column',
+            boxShadow: '8px 0 40px rgba(0,0,0,0.7)',
             animation: 'slideInLeft 0.3s cubic-bezier(0.22,1,0.36,1)',
-            backdropFilter: 'blur(20px)',
+            backdropFilter: 'blur(24px)',
           }}>
 
-            {/* Image de couverture */}
-            <div style={{
-              width: '100%', height: 140,
-              background: selectedLocation.cover_url
-                ? `url(${selectedLocation.cover_url}) center/cover`
-                : `linear-gradient(135deg, ${selectedLocation.color ?? '#b96eff'}44, ${selectedLocation.color ?? '#7b9fff'}22)`,
-              position: 'relative', flexShrink: 0,
-            }}>
-              {/* Bouton fermer */}
-              <button
-                onClick={() => { setSelectedLocation(null); setLocationPlayers([]) }}
-                style={{
-                  position: 'absolute', top: 10, right: 10,
-                  width: 28, height: 28, borderRadius: '50%',
-                  background: 'rgba(0,0,0,0.6)', border: 'none',
-                  color: '#fff', fontSize: 14, cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}
-              >✕</button>
-
-              {/* Icône du lieu */}
-              {!selectedLocation.cover_url && (
+            {/* Hero */}
+            <div style={{ width: '100%', height: 170, position: 'relative', flexShrink: 0, overflow: 'hidden' }}>
+              {selectedLocation.cover_url
+                ? <img src={selectedLocation.cover_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : <div style={{
+                    width: '100%', height: '100%',
+                    background: `linear-gradient(135deg, ${selectedLocation.color ?? '#b96eff'}88, #0a0a14)`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 72,
+                  }}>{selectedLocation.icon ?? '📍'}</div>
+              }
+              {/* Dégradé bas */}
+              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 90, background: 'linear-gradient(0deg, rgba(8,8,14,1) 0%, transparent 100%)' }} />
+              {/* Fermer */}
+              <button onClick={() => { setSelectedLocation(null); setLocationPlayers([]) }} style={{
+                position: 'absolute', top: 10, right: 10,
+                width: 30, height: 30, borderRadius: '50%',
+                background: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.1)',
+                color: '#fff', fontSize: 13, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                backdropFilter: 'blur(8px)',
+              }}>✕</button>
+              {/* Titre sur hero */}
+              <div style={{ position: 'absolute', bottom: 14, left: 14, right: 14, display: 'flex', alignItems: 'flex-end', gap: 10 }}>
                 <div style={{
-                  position: 'absolute', bottom: 12, left: 16,
-                  fontSize: 40,
-                }}>
-                  {selectedLocation.icon ?? '📍'}
+                  width: 40, height: 40, borderRadius: 12, flexShrink: 0,
+                  background: selectedLocation.color ?? '#b96eff',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22,
+                  boxShadow: `0 4px 16px ${selectedLocation.color ?? '#b96eff'}66`,
+                }}>{selectedLocation.icon ?? '📍'}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 16, fontWeight: 800, color: '#fff', lineHeight: 1.2, textShadow: '0 2px 8px rgba(0,0,0,0.9)' }}>
+                    {selectedLocation.name}
+                  </p>
+                  {selectedLocation.discord_channel && (
+                    <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>#{selectedLocation.discord_channel}</p>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
 
-            {/* Contenu */}
-            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 0 }}>
+            {/* Contenu scrollable */}
+            <div style={{ flex: 1, overflowY: 'auto', scrollbarWidth: 'none' }}>
 
-              {/* Infos principales */}
-              <div style={{ padding: '14px 16px 12px', borderBottom: '1px solid var(--border)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                  <div style={{ width: 10, height: 10, borderRadius: '50%', background: selectedLocation.color ?? '#b96eff', flexShrink: 0 }} />
-                  <h2 style={{ fontSize: 17, fontWeight: 800, color: 'var(--t1)', lineHeight: 1.2, flex: 1 }}>
-                    {selectedLocation.name}
-                  </h2>
-                </div>
-                {selectedLocation.discord_channel && (
-                  <p style={{ fontSize: 11, color: 'var(--t3)', marginLeft: 18, marginBottom: 8 }}>#{selectedLocation.discord_channel}</p>
-                )}
-
-                {/* Téléphone */}
+              {/* Infos + actions */}
+              <div style={{ padding: '14px 16px 16px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                 {selectedLocation.phone && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                    <span style={{ fontSize: 14 }}>📞</span>
-                    <p style={{ fontSize: 13, color: 'var(--t2)', fontFamily: 'monospace' }}>{selectedLocation.phone}</p>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '8px 12px', borderRadius: 12, marginBottom: 12,
+                    background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.15)',
+                  }}>
+                    <span style={{ fontSize: 16 }}>📞</span>
+                    <p style={{ fontSize: 13, color: '#86efac', fontFamily: 'monospace', fontWeight: 600 }}>{selectedLocation.phone}</p>
                   </div>
                 )}
-
-                {/* Boutons actions */}
-                <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+                <div style={{ display: 'flex', gap: 8 }}>
                   <button onClick={shareLocation} style={{
-                    flex: 1, padding: '7px 0', borderRadius: 10,
-                    background: 'var(--glass)', border: '1px solid var(--border)',
-                    color: 'var(--t1)', fontSize: 11, fontWeight: 600,
+                    flex: 1, padding: '10px 0', borderRadius: 12,
+                    background: 'rgba(123,159,255,0.1)', border: '1px solid rgba(123,159,255,0.2)',
+                    color: '#7b9fff', fontSize: 12, fontWeight: 700,
                     cursor: 'pointer', fontFamily: 'inherit',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-                  }}>
-                    🔗 Partager
-                  </button>
-                  <button onClick={() => { setShowAddReview(!showAddReview) }} style={{
-                    flex: 1, padding: '7px 0', borderRadius: 10,
-                    background: 'var(--glass)', border: '1px solid var(--border)',
-                    color: 'var(--t1)', fontSize: 11, fontWeight: 600,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  }}>🔗 Partager</button>
+                  <button onClick={() => setShowAddReview(!showAddReview)} style={{
+                    flex: 1, padding: '10px 0', borderRadius: 12,
+                    background: 'rgba(185,110,255,0.1)', border: '1px solid rgba(185,110,255,0.2)',
+                    color: '#b96eff', fontSize: 12, fontWeight: 700,
                     cursor: 'pointer', fontFamily: 'inherit',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-                  }}>
-                    ✍️ Avis
-                  </button>
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  }}>✍️ Avis</button>
                 </div>
               </div>
 
               {/* Description */}
-              <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                  <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Description</p>
+              <div style={{ padding: '14px 16px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <p style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>Description</p>
                   {isMJ && !editingDesc && (
-                    <button onClick={() => { setEditDesc(selectedLocation.description ?? ''); setEditingDesc(true) }} style={{
-                      background: 'none', border: 'none', color: 'var(--accent)', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit',
-                    }}>✏️ Modifier</button>
+                    <button onClick={() => { setEditDesc(selectedLocation.description ?? ''); setEditingDesc(true) }}
+                      style={{ background: 'none', border: 'none', color: '#b96eff', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>
+                      ✏️ Modifier
+                    </button>
                   )}
                 </div>
                 {editingDesc ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <textarea
-                      value={editDesc}
-                      onChange={e => setEditDesc(e.target.value)}
-                      placeholder="Décris ce lieu..."
-                      style={{
-                        width: '100%', height: 80, resize: 'none',
-                        background: 'var(--bg3)', border: '1px solid var(--border2)',
-                        borderRadius: 10, padding: '8px 10px',
-                        color: 'var(--t1)', fontSize: 12, fontFamily: 'inherit',
-                        outline: 'none',
-                      }}
+                    <textarea value={editDesc} onChange={e => setEditDesc(e.target.value)} placeholder="Décris ce lieu..."
+                      style={{ width: '100%', height: 80, resize: 'none', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '8px 10px', color: '#e0e0e0', fontSize: 12, fontFamily: 'inherit', outline: 'none' }}
                     />
                     <div style={{ display: 'flex', gap: 6 }}>
-                      <button onClick={saveDescription} className="btn-primary" style={{ flex: 1, padding: '7px', fontSize: 12 }}>Sauvegarder</button>
-                      <button onClick={() => setEditingDesc(false)} style={{ padding: '7px 12px', background: 'var(--glass)', border: '1px solid var(--border)', borderRadius: 10, color: 'var(--t2)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>Annuler</button>
+                      <button onClick={saveDescription} style={{ flex: 1, padding: '8px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg, #b96eff, #7b9fff)', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Sauvegarder</button>
+                      <button onClick={() => setEditingDesc(false)} style={{ padding: '8px 12px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: '#666', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>Annuler</button>
                     </div>
                   </div>
                 ) : (
-                  <p style={{ fontSize: 12, color: selectedLocation.description ? 'var(--t2)' : 'var(--t3)', lineHeight: 1.6, fontStyle: selectedLocation.description ? 'normal' : 'italic' }}>
-                    {selectedLocation.description || 'Aucune description.'}
+                  <p style={{ fontSize: 13, lineHeight: 1.7, color: selectedLocation.description ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.18)', fontStyle: selectedLocation.description ? 'normal' : 'italic' }}>
+                    {selectedLocation.description || 'Aucune description pour l\'instant.'}
                   </p>
                 )}
               </div>
 
-              {/* Joueurs présents */}
-              <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
-                <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
-                  {locationPlayers.length > 0 ? `${locationPlayers.length} joueur${locationPlayers.length > 1 ? 's' : ''} ici` : 'Aucun joueur ici'}
+              {/* Joueurs */}
+              <div style={{ padding: '14px 16px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <p style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 10 }}>
+                  {locationPlayers.length > 0 ? `${locationPlayers.length} présent${locationPlayers.length > 1 ? 's' : ''}` : 'Personne ici'}
                 </p>
-                {locationPlayers.length > 0 && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, position: 'relative' }}>
+                {locationPlayers.length > 0 ? (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                     {locationPlayers.map(p => (
                       <div key={p.id} style={{ position: 'relative' }}>
-                        <div
-                          onMouseEnter={() => setHoveredPlayer(p.id)}
-                          onMouseLeave={() => setHoveredPlayer(null)}
+                        <div onMouseEnter={() => setHoveredPlayer(p.id)} onMouseLeave={() => setHoveredPlayer(null)}
                           style={{
-                            width: 36, height: 36, borderRadius: '50%',
+                            width: 40, height: 40, borderRadius: '50%',
                             background: p.avatar_color ?? '#555',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: 12, fontWeight: 700, color: '#fff',
-                            overflow: 'hidden', cursor: 'default',
-                            border: p.id === user?.id ? '2px solid var(--accent)' : '2px solid transparent',
+                            fontSize: 13, fontWeight: 700, color: '#fff', overflow: 'hidden',
+                            border: p.id === user?.id ? '2.5px solid #b96eff' : '2px solid rgba(255,255,255,0.1)',
+                            boxShadow: p.id === user?.id ? '0 0 12px rgba(185,110,255,0.5)' : '0 2px 8px rgba(0,0,0,0.4)',
+                            cursor: 'default', transition: 'transform 0.15s',
                           }}
                         >
-                          {p.avatar_url
-                            ? <img src={p.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            : p.initials ?? '?'
-                          }
+                          {p.avatar_url ? <img src={p.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : p.initials ?? '?'}
                         </div>
                         {hoveredPlayer === p.id && (
                           <div style={{
                             position: 'absolute', bottom: '110%', left: '50%', transform: 'translateX(-50%)',
-                            background: 'rgba(0,0,0,0.85)', color: '#fff',
-                            fontSize: 11, fontWeight: 600, padding: '4px 8px',
+                            background: 'rgba(0,0,0,0.92)', color: '#fff',
+                            fontSize: 11, fontWeight: 700, padding: '5px 9px',
                             borderRadius: 8, whiteSpace: 'nowrap', zIndex: 10,
+                            border: '1px solid rgba(255,255,255,0.1)',
                             pointerEvents: 'none',
                           }}>
-                            {p.id === user?.id ? 'Toi' : p.username}
+                            {p.id === user?.id ? '👤 Toi' : p.username}
                           </div>
                         )}
                       </div>
                     ))}
                   </div>
+                ) : (
+                  <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.15)', fontStyle: 'italic' }}>Aucun personnage dans ce lieu.</p>
                 )}
               </div>
 
               {/* Formulaire avis */}
               {showAddReview && (
-                <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', background: 'var(--bg2)', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--t1)' }}>Laisser un avis</p>
-
-                  {/* Type joueur/PNJ */}
+                <div style={{ padding: '14px 16px', borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(185,110,255,0.03)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: '#e0e0e0' }}>Laisser un avis</p>
                   <div style={{ display: 'flex', gap: 6 }}>
                     {['joueur', 'pnj'].map(t => (
                       <button key={t} onClick={() => setNewReview(p => ({ ...p, type: t }))} style={{
-                        flex: 1, padding: '6px', borderRadius: 8, fontSize: 11, fontWeight: 600,
+                        flex: 1, padding: '8px', borderRadius: 10, fontSize: 12, fontWeight: 700,
                         cursor: 'pointer', fontFamily: 'inherit',
-                        background: newReview.type === t ? 'var(--accent)' : 'var(--glass)',
-                        border: `1px solid ${newReview.type === t ? 'var(--accent)' : 'var(--border)'}`,
-                        color: newReview.type === t ? '#fff' : 'var(--t2)',
-                      }}>
-                        {t === 'joueur' ? '👤 Joueur' : '🎭 PNJ'}
-                      </button>
+                        background: newReview.type === t ? (t === 'pnj' ? 'rgba(185,110,255,0.2)' : 'rgba(123,159,255,0.2)') : 'rgba(255,255,255,0.04)',
+                        border: `1px solid ${newReview.type === t ? (t === 'pnj' ? 'rgba(185,110,255,0.4)' : 'rgba(123,159,255,0.4)') : 'rgba(255,255,255,0.08)'}`,
+                        color: newReview.type === t ? '#fff' : '#555',
+                      }}>{t === 'joueur' ? '👤 Joueur' : '🎭 PNJ'}</button>
                     ))}
                   </div>
-
-                  {/* Nom PNJ */}
                   {newReview.type === 'pnj' && (
-                    <input
-                      placeholder="Nom du PNJ"
-                      value={newReview.author_name}
-                      onChange={e => setNewReview(p => ({ ...p, author_name: e.target.value }))}
-                      style={{ border: '1px solid var(--border2)', borderRadius: 8, padding: '7px 10px', background: 'var(--bg3)', color: 'var(--t1)', fontSize: 12, fontFamily: 'inherit', outline: 'none' }}
+                    <input placeholder="Nom du PNJ" value={newReview.author_name} onChange={e => setNewReview(p => ({ ...p, author_name: e.target.value }))}
+                      style={{ border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '8px 12px', background: 'rgba(255,255,255,0.05)', color: '#e0e0e0', fontSize: 12, fontFamily: 'inherit', outline: 'none' }}
                     />
                   )}
-
-                  {/* Note */}
                   <div style={{ display: 'flex', gap: 4 }}>
                     {[1,2,3,4,5].map(n => (
                       <span key={n} onClick={() => setNewReview(p => ({ ...p, rating: n }))}
-                        style={{ fontSize: 18, cursor: 'pointer', opacity: n <= newReview.rating ? 1 : 0.3 }}>⭐</span>
+                        style={{ fontSize: 22, cursor: 'pointer', opacity: n <= newReview.rating ? 1 : 0.2, transition: 'opacity 0.15s' }}>⭐</span>
                     ))}
                   </div>
-
-                  {/* Texte */}
-                  <textarea
-                    placeholder="Ton avis sur ce lieu..."
-                    value={newReview.content}
-                    onChange={e => setNewReview(p => ({ ...p, content: e.target.value }))}
-                    style={{ width: '100%', height: 70, resize: 'none', background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 8, padding: '8px 10px', color: 'var(--t1)', fontSize: 12, fontFamily: 'inherit', outline: 'none' }}
+                  <textarea placeholder="Ton avis..." value={newReview.content} onChange={e => setNewReview(p => ({ ...p, content: e.target.value }))}
+                    style={{ width: '100%', height: 70, resize: 'none', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '8px 12px', color: '#e0e0e0', fontSize: 12, fontFamily: 'inherit', outline: 'none' }}
                   />
-
                   <div style={{ display: 'flex', gap: 6 }}>
-                    <button onClick={addReview} className="btn-primary" style={{ flex: 1, padding: '7px', fontSize: 12 }}>Publier</button>
-                    <button onClick={() => setShowAddReview(false)} style={{ padding: '7px 12px', background: 'var(--glass)', border: '1px solid var(--border)', borderRadius: 10, color: 'var(--t2)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>Annuler</button>
+                    <button onClick={addReview} style={{ flex: 1, padding: '9px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg, #b96eff, #7b9fff)', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Publier</button>
+                    <button onClick={() => setShowAddReview(false)} style={{ padding: '9px 14px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, color: '#555', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>Annuler</button>
                   </div>
                 </div>
               )}
 
-              {/* Avis */}
+              {/* Avis existants */}
               {reviews.length > 0 && (
-                <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
-                  <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
-                    Avis ({reviews.length})
-                  </p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ padding: '14px 16px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                  <p style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 12 }}>Avis ({reviews.length})</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {reviews.map(r => (
-                      <div key={r.id} style={{ background: 'var(--bg2)', borderRadius: 12, padding: '10px 12px', border: '1px solid var(--border)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span style={{ fontSize: 12 }}>{r.type === 'pnj' ? '🎭' : '👤'}</span>
-                            <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--t1)' }}>{r.author_name}</p>
+                      <div key={r.id} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 14, padding: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                            <span style={{ fontSize: 14 }}>{r.type === 'pnj' ? '🎭' : '👤'}</span>
+                            <p style={{ fontSize: 12, fontWeight: 700, color: '#e0e0e0' }}>{r.author_name}</p>
                             {r.type === 'pnj' && (
-                              <span style={{ fontSize: 9, fontWeight: 700, background: 'rgba(185,110,255,0.2)', color: 'var(--accent)', padding: '1px 5px', borderRadius: 4 }}>PNJ</span>
+                              <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: 'rgba(185,110,255,0.15)', color: '#b96eff', border: '1px solid rgba(185,110,255,0.2)' }}>PNJ</span>
                             )}
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span style={{ fontSize: 10, color: 'var(--t3)' }}>{'⭐'.repeat(r.rating)}</span>
+                            <span style={{ fontSize: 10 }}>{'⭐'.repeat(r.rating)}</span>
                             {(r.user_id === user?.id || isMJ) && (
-                              <button onClick={() => deleteReview(r.id)} style={{ background: 'none', border: 'none', color: 'var(--danger)', fontSize: 12, cursor: 'pointer', padding: 0 }}>🗑️</button>
+                              <button onClick={() => deleteReview(r.id)} style={{ background: 'none', border: 'none', color: 'rgba(239,68,68,0.5)', fontSize: 12, cursor: 'pointer', padding: 0 }}>🗑️</button>
                             )}
                           </div>
                         </div>
-                        <p style={{ fontSize: 12, color: 'var(--t2)', lineHeight: 1.5 }}>{r.content}</p>
+                        <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', lineHeight: 1.6 }}>{r.content}</p>
                       </div>
                     ))}
                   </div>
@@ -925,34 +892,37 @@ export default function MapScreen({ onBack }) {
 
               {/* Admin MJ */}
               {isMJ && (
-                <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Admin MJ</p>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 10, background: 'var(--glass)', border: '1px solid var(--border)', cursor: 'pointer', fontSize: 12, color: 'var(--t2)' }}>
-                    🖼️ {selectedLocation.cover_url ? 'Changer la couverture' : 'Ajouter une couverture'}
-                    <input type="file" accept="image/*" style={{ display: 'none' }}
-                      onChange={async e => {
-                        const file = e.target.files[0]
-                        if (!file) return
-                        const ext = file.name.split('.').pop()
-                        const path = `covers/${selectedLocation.id}.${ext}`
-                        const { error: upErr } = await supabase.storage.from('post-images').upload(path, file, { upsert: true })
-                        if (upErr) return
-                        const { data: urlData } = supabase.storage.from('post-images').getPublicUrl(path)
-                        const url = urlData.publicUrl + '?t=' + Date.now()
-                        await supabase.from('map_locations').update({ cover_url: url }).eq('id', selectedLocation.id)
-                        setSelectedLocation(prev => ({ ...prev, cover_url: url }))
-                        fetchLocations()
-                      }}
-                    />
-                  </label>
-                  <button onClick={() => { deleteLocation(selectedLocation.id); setSelectedLocation(null) }} style={{ padding: '8px 12px', borderRadius: 10, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: 'var(--danger)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
-                    🗑️ Supprimer ce lieu
-                  </button>
+                <div style={{ padding: '14px 16px' }}>
+                  <p style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 10 }}>Admin MJ</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer', fontSize: 12, color: '#888' }}>
+                      🖼️ {selectedLocation.cover_url ? 'Changer la couverture' : 'Ajouter une couverture'}
+                      <input type="file" accept="image/*" style={{ display: 'none' }}
+                        onChange={async e => {
+                          const file = e.target.files[0]
+                          if (!file) return
+                          const ext = file.name.split('.').pop()
+                          const path = `covers/${selectedLocation.id}.${ext}`
+                          const { error: upErr } = await supabase.storage.from('post-images').upload(path, file, { upsert: true })
+                          if (upErr) return
+                          const { data: urlData } = supabase.storage.from('post-images').getPublicUrl(path)
+                          const url = urlData.publicUrl + '?t=' + Date.now()
+                          await supabase.from('map_locations').update({ cover_url: url }).eq('id', selectedLocation.id)
+                          setSelectedLocation(prev => ({ ...prev, cover_url: url }))
+                          fetchLocations()
+                        }}
+                      />
+                    </label>
+                    <button onClick={() => { deleteLocation(selectedLocation.id); setSelectedLocation(null) }} style={{ padding: '10px 12px', borderRadius: 12, background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.12)', color: '#f87171', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      🗑️ Supprimer ce lieu
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
           </div>
         )}
+
 
         {/* Toast partage */}
         {shareToast && (
