@@ -8,6 +8,7 @@ const ALL_APPS = [
   { id: 'phone',     label: 'Téléphone',      icon: '📞', bg: 'linear-gradient(135deg,#0d2818,#0a1f12)' },
   { id: 'instagrim', label: 'Capture',        icon: null, img: '/capture.png', bg: 'transparent', badge: 1 },
   { id: 'map',       label: 'Carte',          icon: '🗺️', bg: 'linear-gradient(135deg,#0a1f2e,#0d2a1a)' },
+  { id: 'crush',     label: 'Crush',          icon: '💘', bg: 'linear-gradient(135deg,#3d0020,#1a000f)' },
   { id: 'notes',     label: 'Notes',          icon: '📝', bg: 'linear-gradient(135deg,#1f1a0a,#2a2210)' },
   { id: 'camera',    label: 'Appareil photo', icon: '🤳', bg: 'linear-gradient(135deg,#1a1a1a,#222)' },
   { id: 'settings',  label: 'Réglages',       icon: '⚙️', bg: 'linear-gradient(135deg,#1a1a1a,#222)' },
@@ -15,7 +16,7 @@ const ALL_APPS = [
 
 export default function HomeScreen({ onOpenApp, onSwitchToDesktop }) {
   const { profile, signOut } = useAuth()
-  const unlockedApps = profile?.unlocked_apps ?? ['messages', 'phone', 'instagrim', 'map']
+  const unlockedApps = profile?.unlocked_apps ?? ['messages', 'phone', 'instagrim', 'map', 'crush']
   const today = new Date()
   const dateStr = today.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
   const location = profile?.location || 'Île de Valoria'

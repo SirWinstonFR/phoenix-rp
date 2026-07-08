@@ -814,6 +814,14 @@ body {
 .img-upload-zone img   { width: 100%; height: 100%; object-fit: cover; }
 .img-upload-zone input { display: none; }
 
+@keyframes swipeRight {
+  to { transform: translateX(150%) rotate(20deg); opacity: 0; }
+}
+
+@keyframes swipeLeft {
+  to { transform: translateX(-150%) rotate(-20deg); opacity: 0; }
+}
+
 @keyframes slideInLeft {
   from { transform: translateX(-100%); opacity: 0; }
   to   { transform: translateX(0); opacity: 1; }

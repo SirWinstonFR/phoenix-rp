@@ -6,10 +6,13 @@ import InstaGrimScreen from './screens/InstaGrimScreen'
 import MapScreen from './screens/MapScreen'
 import DesktopMode from './desktop/DesktopMode'
 
+import CrushScreen from './screens/CrushScreen'
+
 const SCREENS = {
   home:      HomeScreen,
   instagrim: InstaGrimScreen,
   map:       MapScreen,
+  crush:     CrushScreen,
 }
 
 export default function App() {
