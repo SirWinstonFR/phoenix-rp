@@ -8,6 +8,7 @@ import DesktopMode from './desktop/DesktopMode'
 
 import CrushScreen from './screens/CrushScreen'
 import IDScreen from './screens/IDScreen'
+import StoreScreen from './screens/StoreScreen'
 
 const SCREENS = {
   home:      HomeScreen,
@@ -15,6 +16,7 @@ const SCREENS = {
   map:       MapScreen,
   crush:     CrushScreen,
   id:        IDScreen,
+  store:     StoreScreen,
 }
 
 export default function App() {
@@ -57,6 +59,14 @@ export default function App() {
   }
 
   if (!user) return <PhoneLoginScreen />
+
+  // Appliquer le thème du téléphone équipé
+  const phoneTheme = profile?.phone_theme
+  const phoneStyle = phoneTheme ? {
+    '--phone-accent':  phoneTheme.color,
+    '--phone-bg':      phoneTheme.bg,
+    '--phone-radius':  phoneTheme.border_radius + 'px',
+  } : {}
 
   if (mode === 'desktop') {
     return <DesktopMode onSwitchToPhone={() => setMode('phone')} />

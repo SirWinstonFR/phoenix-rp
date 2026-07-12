@@ -11,6 +11,7 @@ const ALL_APPS = [
   { id: 'map',       label: 'Carte',          icon: '🗺️', bg: 'linear-gradient(135deg,#0a1f2e,#0d2a1a)' },
   { id: 'crush',     label: 'Crush',          icon: '💘', bg: 'linear-gradient(135deg,#3d0020,#1a000f)' },
   { id: 'id',        label: 'ID Card',        icon: '🪪', bg: 'linear-gradient(135deg,#0a2a6e,#1a4aae)' },
+  { id: 'store',     label: 'Store',          icon: '🛍️', bg: 'linear-gradient(135deg,#1a2e1a,#0a1f0a)' },
   { id: 'notes',     label: 'Notes',          icon: '📝', bg: 'linear-gradient(135deg,#1f1a0a,#2a2210)' },
   { id: 'settings',  label: 'Réglages',       icon: '⚙️', bg: 'linear-gradient(135deg,#1a1a1a,#222)' },
 ]
@@ -19,7 +20,7 @@ const STORAGE_KEY = 'rp_app_order'
 
 export default function HomeScreen({ onOpenApp, onSwitchToDesktop }) {
   const { profile, signOut } = useAuth()
-  const unlockedApps = profile?.unlocked_apps ?? ['messages', 'phone', 'instagrim', 'map', 'crush', 'id']
+  const unlockedApps = profile?.unlocked_apps ?? ['messages', 'phone', 'instagrim', 'map', 'crush', 'id', 'store']
 
   const today = new Date()
   const dateStr = today.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
