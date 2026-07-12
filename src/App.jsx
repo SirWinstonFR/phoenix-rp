@@ -20,7 +20,7 @@ const SCREENS = {
 }
 
 export default function App() {
-  const { user, loading } = useAuth()
+  const { user, loading, profile } = useAuth()
   const [currentScreen, setCurrentScreen] = useState('home')
   const [mode, setMode] = useState(() => {
     // Lire le mode choisi avant la redirection Discord
