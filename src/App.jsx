@@ -60,12 +60,13 @@ export default function App() {
 
   if (!user) return <PhoneLoginScreen />
 
-  // Appliquer le thème du téléphone équipé
+  // Thème du téléphone équipé
   const phoneTheme = profile?.phone_theme
-  const phoneStyle = phoneTheme ? {
-    '--phone-accent':  phoneTheme.color,
-    '--phone-bg':      phoneTheme.bg,
-    '--phone-radius':  phoneTheme.border_radius + 'px',
+  const themeVars = phoneTheme ? {
+    '--accent':      phoneTheme.color,
+    '--accent2':     phoneTheme.color,
+    '--glow':        phoneTheme.color + '33',
+    '--grad':        `linear-gradient(135deg, ${phoneTheme.color}, #7b9fff)`,
   } : {}
 
   if (mode === 'desktop') {
@@ -75,15 +76,27 @@ export default function App() {
   const Screen = SCREENS[currentScreen] ?? HomeScreen
 
   return (
-    <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} style={{ display: 'contents' }}>
-      <Screen
-        onOpenApp={appId => {
-          if (SCREENS[appId]) setCurrentScreen(appId)
-          else alert('Cette app arrive bientôt !')
-        }}
-        onBack={() => setCurrentScreen('home')}
-        onSwitchToDesktop={() => setMode('desktop')}
-      />
+    <div
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      style={{ display: 'contents', ...themeVars }}
+    >
+      {/* Wrapper qui applique le thème au téléphone */}
+      <div style={{
+        display: 'contents',
+        '--accent':  phoneTheme?.color ?? '#b96eff',
+        '--grad':    phoneTheme ? `linear-gradient(135deg, ${phoneTheme.color}, #7b9fff)` : 'linear-gradient(135deg, #b96eff, #7b9fff)',
+      }}>
+        <Screen
+          onOpenApp={appId => {
+            if (SCREENS[appId]) setCurrentScreen(appId)
+            else alert('Cette app arrive bientôt !')
+          }}
+          onBack={() => setCurrentScreen('home')}
+          onSwitchToDesktop={() => setMode('desktop')}
+          phoneTheme={phoneTheme}
+        />
+      </div>
     </div>
   )
 }

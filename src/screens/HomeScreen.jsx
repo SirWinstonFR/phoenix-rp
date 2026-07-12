@@ -18,7 +18,7 @@ const ALL_APPS = [
 
 const STORAGE_KEY = 'rp_app_order'
 
-export default function HomeScreen({ onOpenApp, onSwitchToDesktop }) {
+export default function HomeScreen({ onOpenApp, onSwitchToDesktop, phoneTheme }) {
   const { profile, signOut } = useAuth()
   const unlockedApps = profile?.unlocked_apps ?? ['messages', 'phone', 'instagrim', 'map', 'crush', 'id', 'store']
 
@@ -113,7 +113,11 @@ export default function HomeScreen({ onOpenApp, onSwitchToDesktop }) {
   }
 
   return (
-    <div className="phone" onClick={() => editMode && setEditMode(false)}>
+    <div className="phone" onClick={() => editMode && setEditMode(false)} style={phoneTheme ? {
+      borderRadius: phoneTheme.border_radius,
+      background: phoneTheme.bg,
+      boxShadow: `0 0 0 6px #0c0c0c, 0 0 0 7px rgba(255,255,255,0.05), 0 40px 100px rgba(0,0,0,0.95), 0 0 80px ${phoneTheme.color}22`,
+    } : {}}>
       <StatusBar />
       <div className="home-wrap">
 
