@@ -8,7 +8,6 @@ import DesktopMode from './desktop/DesktopMode'
 
 import CrushScreen from './screens/CrushScreen'
 import IDScreen from './screens/IDScreen'
-import CharacterSetup from './screens/CharacterSetup'
 
 const SCREENS = {
   home:      HomeScreen,
@@ -58,11 +57,6 @@ export default function App() {
   }
 
   if (!user) return <PhoneLoginScreen />
-
-  // Première connexion → création du personnage
-  if (profile && !profile.setup_complete) {
-    return <CharacterSetup />
-  }
 
   if (mode === 'desktop') {
     return <DesktopMode onSwitchToPhone={() => setMode('phone')} />
