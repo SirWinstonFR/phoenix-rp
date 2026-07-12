@@ -142,7 +142,7 @@ export default function IDScreen({ onBack }) {
                     </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <p style={{ fontSize: 7, color: 'rgba(255,255,255,0.7)', letterSpacing: '0.1em' }}>PHOENIX REPUBLIC</p>
+                    <p style={{ fontSize: 7, color: 'rgba(255,255,255,0.7)', letterSpacing: '0.1em' }}>CITY OF PHOENIX</p>
                     <p style={{ fontSize: 7, color: 'rgba(255,255,255,0.5)' }}>IDENTIFICATION CARD</p>
                   </div>
                 </div>
@@ -235,7 +235,7 @@ export default function IDScreen({ onBack }) {
                     {idNumber}
                   </p>
                   <p style={{ fontSize: 7, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.08em' }}>
-                    STATE OF ARIZONA · PHOENIX RP
+                    STATE OF ARIZONA · CITY OF PHOENIX
                   </p>
                 </div>
               </div>
@@ -296,7 +296,7 @@ export default function IDScreen({ onBack }) {
 
                   {/* Mentions */}
                   <p style={{ fontSize: 7, color: '#888', lineHeight: 1.8, letterSpacing: '0.01em' }}>
-                    This card is issued by the State of Arizona, Phoenix Republic. It is the property of the issuing authority and must be surrendered upon demand. Unauthorized reproduction is a felony under A.R.S. § 28-3478. For verification: phoenixrp.gov/id
+                    This card is issued by the State of Arizona. It is the property of the issuing authority and must be surrendered upon demand. Unauthorized reproduction is a felony under A.R.S. § 28-3478. For verification: az.gov/id
                   </p>
 
                   {/* DD */}
