@@ -99,6 +99,7 @@ export default function StoreScreen({ onBack }) {
         border_radius: playerPhone.phone_models.border_radius,
         notch_style:   playerPhone.phone_models.notch_style,
         font_style:    playerPhone.phone_models.font_style,
+        shell:         playerPhone.phone_models.shell_color ?? '#0c0c0c',
       }
     })
 

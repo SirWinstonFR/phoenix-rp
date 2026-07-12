@@ -86,9 +86,12 @@ export default function App() {
         display: 'contents',
         '--accent':       phoneTheme?.color ?? '#b96eff',
         '--grad':         phoneTheme ? `linear-gradient(135deg, ${phoneTheme.color}, #7b9fff)` : 'linear-gradient(135deg, #b96eff, #7b9fff)',
-        '--phone-bg':     phoneTheme?.bg ?? '#080808',
-        '--phone-radius': phoneTheme ? `${phoneTheme.border_radius}px` : '48px',
-        '--phone-glow':   phoneTheme ? `${phoneTheme.color}22` : 'rgba(185,110,255,0.07)',
+        '--phone-bg':      phoneTheme?.bg ?? '#080808',
+        '--phone-radius':  phoneTheme ? `${phoneTheme.border_radius}px` : '48px',
+        '--phone-glow':    phoneTheme ? `${phoneTheme.color}22` : 'rgba(185,110,255,0.07)',
+        '--phone-shell':   phoneTheme?.shell ?? '#0c0c0c',
+        '--phone-shell-2': phoneTheme?.shell ? phoneTheme.shell + '88' : 'rgba(255,255,255,0.05)',
+        '--phone-border':  phoneTheme ? `${phoneTheme.color}33` : 'rgba(255,255,255,0.1)',
       }}>
         <Screen
           onOpenApp={appId => {
