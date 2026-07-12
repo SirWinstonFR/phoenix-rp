@@ -40,14 +40,14 @@ body {
 .phone {
   width: 340px;
   height: 700px;
-  background: var(--bg);
-  border-radius: 48px;
+  background: var(--phone-bg, var(--bg));
+  border-radius: var(--phone-radius, 48px);
   border: 1px solid rgba(255,255,255,0.1);
   box-shadow:
     0 0 0 6px #0c0c0c,
     0 0 0 7px rgba(255,255,255,0.05),
     0 40px 100px rgba(0,0,0,0.95),
-    0 0 80px rgba(185,110,255,0.07),
+    0 0 80px var(--phone-glow, rgba(185,110,255,0.07)),
     inset 0 1px 0 rgba(255,255,255,0.08);
   overflow: hidden;
   display: flex;

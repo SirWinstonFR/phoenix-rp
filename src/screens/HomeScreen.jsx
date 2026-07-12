@@ -113,11 +113,7 @@ export default function HomeScreen({ onOpenApp, onSwitchToDesktop, phoneTheme })
   }
 
   return (
-    <div className="phone" onClick={() => editMode && setEditMode(false)} style={phoneTheme ? {
-      borderRadius: phoneTheme.border_radius,
-      background: phoneTheme.bg,
-      boxShadow: `0 0 0 6px #0c0c0c, 0 0 0 7px rgba(255,255,255,0.05), 0 40px 100px rgba(0,0,0,0.95), 0 0 80px ${phoneTheme.color}22`,
-    } : {}}>
+    <div className="phone" onClick={() => editMode && setEditMode(false)}>
       <StatusBar />
       <div className="home-wrap">
 

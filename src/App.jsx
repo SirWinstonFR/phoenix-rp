@@ -84,8 +84,11 @@ export default function App() {
       {/* Wrapper qui applique le thème au téléphone */}
       <div style={{
         display: 'contents',
-        '--accent':  phoneTheme?.color ?? '#b96eff',
-        '--grad':    phoneTheme ? `linear-gradient(135deg, ${phoneTheme.color}, #7b9fff)` : 'linear-gradient(135deg, #b96eff, #7b9fff)',
+        '--accent':       phoneTheme?.color ?? '#b96eff',
+        '--grad':         phoneTheme ? `linear-gradient(135deg, ${phoneTheme.color}, #7b9fff)` : 'linear-gradient(135deg, #b96eff, #7b9fff)',
+        '--phone-bg':     phoneTheme?.bg ?? '#080808',
+        '--phone-radius': phoneTheme ? `${phoneTheme.border_radius}px` : '48px',
+        '--phone-glow':   phoneTheme ? `${phoneTheme.color}22` : 'rgba(185,110,255,0.07)',
       }}>
         <Screen
           onOpenApp={appId => {
