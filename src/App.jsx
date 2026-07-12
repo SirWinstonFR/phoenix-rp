@@ -7,12 +7,15 @@ import MapScreen from './screens/MapScreen'
 import DesktopMode from './desktop/DesktopMode'
 
 import CrushScreen from './screens/CrushScreen'
+import IDScreen from './screens/IDScreen'
+import CharacterSetup from './screens/CharacterSetup'
 
 const SCREENS = {
   home:      HomeScreen,
   instagrim: InstaGrimScreen,
   map:       MapScreen,
   crush:     CrushScreen,
+  id:        IDScreen,
 }
 
 export default function App() {
@@ -55,6 +58,11 @@ export default function App() {
   }
 
   if (!user) return <PhoneLoginScreen />
+
+  // Première connexion → création du personnage
+  if (profile && !profile.setup_complete) {
+    return <CharacterSetup />
+  }
 
   if (mode === 'desktop') {
     return <DesktopMode onSwitchToPhone={() => setMode('phone')} />

@@ -8,12 +8,14 @@ import MapScreen from '../screens/MapScreen'
 import './desktop.css'
 
 import CrushScreen from '../screens/CrushScreen'
+import IDScreen from '../screens/IDScreen'
 
 const APPS = [
   { id: 'messages',  label: 'Messages',  icon: '💬', bg: 'linear-gradient(135deg,#1a1a3e,#0d1a2e)' },
   { id: 'instagrim', label: 'Capture',   icon: null,  img: '/capture.png', bg: 'transparent' },
   { id: 'map',       label: 'Carte',     icon: '🗺️', bg: 'linear-gradient(135deg,#0a1f2e,#0d2a1a)' },
   { id: 'crush',     label: 'Crush',     icon: '💘', bg: 'linear-gradient(135deg,#3d0020,#1a000f)' },
+  { id: 'id',        label: 'ID Card',   icon: '🪪', bg: 'linear-gradient(135deg,#0a2a6e,#1a4aae)' },
   { id: 'notes',     label: 'Notes',     icon: '📝', bg: 'linear-gradient(135deg,#1f1a0a,#2a2210)' },
   { id: 'settings',  label: 'Réglages',  icon: '⚙️', bg: 'linear-gradient(135deg,#1a1a1a,#222)' },
 ]
@@ -94,6 +96,8 @@ export default function DesktopMode({ onSwitchToPhone }) {
         return <MapScreen onBack={() => closeWindow(win.id)} />
       case 'crush':
         return <CrushScreen onBack={() => closeWindow(win.id)} />
+      case 'id':
+        return <IDScreen onBack={() => closeWindow(win.id)} />
       default:
         return (
           <div style={{
