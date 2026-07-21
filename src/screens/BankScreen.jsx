@@ -9,7 +9,7 @@ const BANK_NAME = 'Desert Valley Bank'
 
 export default function BankScreen({ onBack }) {
   const { user, profile, updateProfile } = useAuth()
-  const [view, setView]           = useState('home') // 'home' | 'send' | 'savings' | 'mj-panel'
+  const [view, setView]           = useState('home') // 'home' | 'send' | 'savings' | 'mj-panel' | 'request' | 'receive'
   const [transactions, setTransactions] = useState([])
   const [loading, setLoading]     = useState(true)
   const [showBalance, setShowBalance] = useState(true)
@@ -17,6 +17,15 @@ export default function BankScreen({ onBack }) {
   const [historyFilter, setHistoryFilter] = useState('all') // 'all' | 'sent' | 'received'
   const [selectedTx, setSelectedTx] = useState(null)
   const [confirmSend, setConfirmSend] = useState(false)
+
+  // Demandes d'argent
+  const [pendingRequests, setPendingRequests] = useState([])
+  const [reqSearch, setReqSearch]     = useState('')
+  const [reqResults, setReqResults]   = useState([])
+  const [reqTarget, setReqTarget]     = useState(null)
+  const [reqAmount, setReqAmount]     = useState('')
+  const [reqNote, setReqNote]         = useState('')
+  const [reqSending, setReqSending]   = useState(false)
 
   // Panel MJ
   const [mjSearch, setMjSearch]     = useState('')
@@ -47,12 +56,33 @@ export default function BankScreen({ onBack }) {
   useEffect(() => {
     fetchTransactions()
     fetchSavings()
+    fetchPendingRequests()
     const channel = supabase
       .channel('bank-transactions')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'transactions' }, () => fetchTransactions())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'money_requests' }, () => fetchPendingRequests())
       .subscribe()
     return () => supabase.removeChannel(channel)
   }, [])
+
+  async function fetchPendingRequests() {
+    const { data } = await supabase
+      .from('money_requests')
+      .select('*')
+      .eq('to_user_id', user.id)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+
+    if (!data?.length) { setPendingRequests([]); return }
+    const fromIds = [...new Set(data.map(r => r.from_user_id))]
+    const { data: profilesData } = await supabase
+      .from('profiles')
+      .select('id, username, initials, avatar_color, avatar_url')
+      .in('id', fromIds)
+    const profilesMap = {}
+    profilesData?.forEach(p => { profilesMap[p.id] = p })
+    setPendingRequests(data.map(r => ({ ...r, fromProfile: profilesMap[r.from_user_id] })))
+  }
 
   async function fetchSavings() {
     const { data } = await supabase.from('savings').select('balance').eq('user_id', user.id).maybeSingle()
@@ -125,6 +155,61 @@ export default function BankScreen({ onBack }) {
       setError('Erreur lors du transfert.')
     }
     setSending(false)
+  }
+
+  async function reqSearchUsers(query) {
+    setReqSearch(query)
+    if (query.trim().length < 2) { setReqResults([]); return }
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, username, initials, avatar_color, avatar_url')
+      .ilike('username', `%${query.trim()}%`)
+      .neq('id', user.id)
+      .limit(10)
+    setReqResults(data ?? [])
+  }
+
+  async function sendRequest() {
+    const amt = parseInt(reqAmount)
+    if (!reqTarget || !amt || amt <= 0) return
+    setReqSending(true)
+    await supabase.from('money_requests').insert({
+      from_user_id: user.id,
+      to_user_id:   reqTarget.id,
+      amount:       amt,
+      note:         reqNote.trim(),
+    })
+    setToast(`✅ Demande de $${amt.toLocaleString()} envoyée à ${reqTarget.username}`)
+    setTimeout(() => setToast(null), 3000)
+    setReqTarget(null); setReqAmount(''); setReqNote(''); setReqSearch(''); setReqResults([])
+    setView('home')
+    setReqSending(false)
+  }
+
+  async function payRequest(request) {
+    if (request.amount > balance) {
+      setToast('❌ Solde insuffisant pour payer cette demande')
+      setTimeout(() => setToast(null), 3000)
+      return
+    }
+    await updateProfile({ balance: balance - request.amount })
+    const { data: recipProfile } = await supabase.from('profiles').select('balance').eq('id', request.from_user_id).single()
+    await supabase.from('profiles').update({ balance: (recipProfile?.balance ?? 0) + request.amount }).eq('id', request.from_user_id)
+    await supabase.from('transactions').insert({
+      from_user_id: user.id, to_user_id: request.from_user_id,
+      amount: request.amount, type: 'transfer',
+      note: request.note || 'Paiement de demande',
+    })
+    await supabase.from('money_requests').update({ status: 'paid' }).eq('id', request.id)
+    setToast(`✅ $${request.amount.toLocaleString()} payés à ${request.fromProfile?.username}`)
+    setTimeout(() => setToast(null), 3000)
+    fetchTransactions()
+    fetchPendingRequests()
+  }
+
+  async function declineRequest(request) {
+    await supabase.from('money_requests').update({ status: 'declined' }).eq('id', request.id)
+    fetchPendingRequests()
   }
 
   async function mjSearchUsers(query) {
@@ -363,6 +448,158 @@ export default function BankScreen({ onBack }) {
               <DetailRow label="ID Transaction" value={selectedTx.id.slice(0, 8).toUpperCase()} mono />
             </div>
           </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── VUE DEMANDER ──
+  if (view === 'request') {
+    return (
+      <div className="phone">
+        <StatusBar />
+        <div className="screen">
+          <div className="app-header">
+            <button className="icon-btn" onClick={() => { setView('home'); setReqTarget(null) }}>←</button>
+            <span className="app-header-title">Demander</span>
+            <span style={{ width: 32 }} />
+          </div>
+
+          <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {!reqTarget ? (
+              <>
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  background: 'var(--bg2)', borderRadius: 14, padding: '10px 14px',
+                  border: '1px solid var(--border)',
+                }}>
+                  <span style={{ fontSize: 16 }}>🔍</span>
+                  <input
+                    autoFocus
+                    placeholder="Qui doit te payer ?"
+                    value={reqSearch}
+                    onChange={e => reqSearchUsers(e.target.value)}
+                    style={{ flex: 1, background: 'none', border: 'none', color: 'var(--t1)', fontSize: 14, outline: 'none', fontFamily: 'inherit' }}
+                  />
+                </div>
+                {reqResults.map(u => (
+                  <div key={u.id} onClick={() => setReqTarget(u)} style={{
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    padding: '10px 12px', borderRadius: 14,
+                    background: 'var(--bg2)', border: '1px solid var(--border)',
+                    cursor: 'pointer',
+                  }}>
+                    <Avatar profile={u} size={40} />
+                    <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--t1)' }}>{u.username}</p>
+                  </div>
+                ))}
+              </>
+            ) : (
+              <>
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '14px', borderRadius: 16,
+                  background: 'rgba(77,217,255,0.06)', border: '1px solid rgba(77,217,255,0.15)',
+                }}>
+                  <Avatar profile={reqTarget} size={44} />
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--t1)' }}>{reqTarget.username}</p>
+                    <p style={{ fontSize: 11, color: 'var(--t3)' }}>Va recevoir la demande</p>
+                  </div>
+                  <button onClick={() => setReqTarget(null)} style={{ background: 'none', border: 'none', color: 'var(--t3)', fontSize: 16, cursor: 'pointer' }}>✕</button>
+                </div>
+
+                <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                  <p style={{ fontSize: 12, color: 'var(--t3)', marginBottom: 8 }}>Montant demandé</p>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                    <span style={{ fontSize: 32, fontWeight: 800, color: '#4dd9ff' }}>$</span>
+                    <input
+                      autoFocus type="number" value={reqAmount} onChange={e => setReqAmount(e.target.value)}
+                      placeholder="0"
+                      style={{ width: 160, background: 'none', border: 'none', fontSize: 40, fontWeight: 800, color: 'var(--t1)', textAlign: 'center', outline: 'none', fontFamily: 'inherit' }}
+                    />
+                  </div>
+                </div>
+
+                <input
+                  placeholder="Pour quoi ? (optionnel)"
+                  value={reqNote} onChange={e => setReqNote(e.target.value)}
+                  style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, padding: '10px 14px', color: 'var(--t1)', fontSize: 13, fontFamily: 'inherit', outline: 'none' }}
+                />
+
+                <button onClick={sendRequest} disabled={reqSending || !reqAmount} style={{
+                  marginTop: 'auto', padding: '14px', borderRadius: 14, border: 'none',
+                  background: 'linear-gradient(135deg, #4dd9ff, #2563eb)',
+                  color: '#fff', fontSize: 15, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit',
+                  opacity: reqAmount ? 1 : 0.5,
+                }}>
+                  {reqSending ? 'Envoi…' : `Demander $${reqAmount || 0}`}
+                </button>
+              </>
+            )}
+          </div>
+          {toast && <Toast msg={toast} />}
+        </div>
+      </div>
+    )
+  }
+
+  // ── VUE RECEVOIR (QR CODE) ──
+  if (view === 'receive') {
+    const idShort = user.id.slice(0, 8).toUpperCase()
+    return (
+      <div className="phone">
+        <StatusBar />
+        <div className="screen">
+          <div className="app-header">
+            <button className="icon-btn" onClick={() => setView('home')}>←</button>
+            <span className="app-header-title">Recevoir</span>
+            <span style={{ width: 32 }} />
+          </div>
+
+          <div style={{ flex: 1, padding: '30px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
+
+            <Avatar profile={profile} size={64} />
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ fontSize: 17, fontWeight: 800, color: 'var(--t1)' }}>{profile?.username}</p>
+              <p style={{ fontSize: 12, color: 'var(--t3)' }}>Scanne pour envoyer de l'argent</p>
+            </div>
+
+            {/* QR Code visuel */}
+            <div style={{
+              width: 180, height: 180, background: '#fff', borderRadius: 20, padding: 12,
+              boxShadow: '0 12px 40px rgba(0,0,0,0.4)',
+              display: 'grid', gridTemplateColumns: 'repeat(12,1fr)', gap: 2,
+            }}>
+              {Array.from({ length: 144 }).map((_, i) => {
+                // Motif pseudo-aléatoire mais stable basé sur l'user id
+                const seed = (user.id.charCodeAt(i % user.id.length) + i * 7) % 3
+                const isCorner = (i < 3 || i > 141 || i % 12 < 3 || i % 12 > 8) && (i < 39 || i > 105)
+                return (
+                  <div key={i} style={{
+                    background: seed === 0 || isCorner && seed !== 2 ? '#000' : '#fff',
+                    borderRadius: 1,
+                  }} />
+                )
+              })}
+            </div>
+
+            <div style={{
+              background: 'var(--bg2)', border: '1px solid var(--border)',
+              borderRadius: 14, padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 10,
+            }}>
+              <p style={{ fontSize: 13, fontFamily: 'monospace', color: 'var(--t2)', letterSpacing: 1 }}>{idShort}</p>
+              <button
+                onClick={() => { navigator.clipboard?.writeText(user.id); setToast('📋 ID copié !'); setTimeout(() => setToast(null), 2000) }}
+                style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 14, cursor: 'pointer' }}
+              >📋</button>
+            </div>
+
+            <p style={{ fontSize: 11, color: 'var(--t3)', textAlign: 'center', lineHeight: 1.6 }}>
+              Les autres joueurs peuvent te trouver en recherchant ton pseudo dans l'onglet Envoyer.
+            </p>
+          </div>
+          {toast && <Toast msg={toast} />}
         </div>
       </div>
     )
@@ -682,7 +919,7 @@ export default function BankScreen({ onBack }) {
           </div>
 
           {/* SOLDE */}
-          <div style={{ textAlign: 'center', padding: '0 20px 20px' }}>
+          <div style={{ textAlign: 'center', padding: '0 20px 8px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 4 }}>
               <p style={{ fontSize: 12, color: 'var(--t3)' }}>Solde disponible</p>
               <button onClick={() => setShowBalance(!showBalance)} style={{ background: 'none', border: 'none', color: 'var(--t3)', fontSize: 12, cursor: 'pointer' }}>
@@ -699,32 +936,74 @@ export default function BankScreen({ onBack }) {
             )}
           </div>
 
+          {/* Sparkline évolution */}
+          <div style={{ padding: '0 20px 20px' }}>
+            <Sparkline transactions={transactions} currentBalance={balance} userId={user.id} />
+          </div>
+
           {/* ACTIONS — design premium */}
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 14, padding: '0 20px 28px' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 14, padding: '0 20px 20px' }}>
             {[
               { icon: '↗️', label: 'Envoyer',  action: () => setView('send'), grad: 'linear-gradient(135deg, #b96eff, #7b9fff)' },
+              { icon: '📷', label: 'Recevoir', action: () => setView('receive'), grad: 'linear-gradient(135deg, #4dd9ff, #2563eb)' },
+              { icon: '🙋', label: 'Demander', action: () => setView('request'), grad: 'linear-gradient(135deg, #f59e0b, #d97706)' },
               { icon: '🏦', label: 'Épargne',  action: () => setView('savings'), grad: 'linear-gradient(135deg, #22c55e, #16a34a)' },
-              { icon: '📋', label: 'Copier ID', action: () => { navigator.clipboard?.writeText(user.id); setToast('📋 ID copié !'); setTimeout(() => setToast(null), 2000) }, grad: 'linear-gradient(135deg, #4dd9ff, #2563eb)' },
             ].map(a => (
               <button key={a.label} onClick={a.action} style={{
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
                 background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
                 flex: 1,
               }}>
                 <div style={{
-                  width: 54, height: 54, borderRadius: 18,
+                  width: 48, height: 48, borderRadius: 16,
                   background: a.grad,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 20, transition: 'transform 0.15s, box-shadow 0.15s',
-                  boxShadow: '0 6px 20px rgba(0,0,0,0.3)',
+                  fontSize: 18, transition: 'transform 0.15s, box-shadow 0.15s',
+                  boxShadow: '0 6px 18px rgba(0,0,0,0.3)',
                 }}
-                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px) scale(1.05)'; e.currentTarget.style.boxShadow = '0 10px 28px rgba(0,0,0,0.4)' }}
-                  onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0) scale(1)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,0,0,0.3)' }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px) scale(1.05)' }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0) scale(1)' }}
                 >{a.icon}</div>
-                <span style={{ fontSize: 11, color: 'var(--t2)', fontWeight: 700 }}>{a.label}</span>
+                <span style={{ fontSize: 10, color: 'var(--t2)', fontWeight: 700 }}>{a.label}</span>
               </button>
             ))}
           </div>
+
+          {/* Demandes en attente */}
+          {pendingRequests.length > 0 && (
+            <div style={{ padding: '0 16px 20px' }}>
+              <p style={{ fontSize: 11, fontWeight: 700, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10, paddingLeft: 4 }}>
+                🙋 Demandes en attente ({pendingRequests.length})
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {pendingRequests.map(r => (
+                  <div key={r.id} style={{
+                    background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)',
+                    borderRadius: 14, padding: '12px 14px',
+                    display: 'flex', alignItems: 'center', gap: 10,
+                  }}>
+                    <Avatar profile={r.fromProfile} size={36} />
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--t1)' }}>
+                        {r.fromProfile?.username} demande <span style={{ color: '#f59e0b' }}>${r.amount.toLocaleString()}</span>
+                      </p>
+                      {r.note && <p style={{ fontSize: 11, color: 'var(--t3)' }}>{r.note}</p>}
+                    </div>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button onClick={() => declineRequest(r)} style={{
+                        width: 30, height: 30, borderRadius: 10, border: '1px solid var(--border)',
+                        background: 'var(--glass)', color: 'var(--t3)', fontSize: 13, cursor: 'pointer',
+                      }}>✕</button>
+                      <button onClick={() => payRequest(r)} style={{
+                        width: 30, height: 30, borderRadius: 10, border: 'none',
+                        background: '#22c55e', color: '#fff', fontSize: 13, cursor: 'pointer',
+                      }}>✓</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* HISTORIQUE */}
           <div style={{ padding: '0 16px' }}>
@@ -778,12 +1057,26 @@ export default function BankScreen({ onBack }) {
                       >
                         {other
                           ? <Avatar profile={other} size={38} />
-                          : <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'linear-gradient(135deg, #b96eff, #7b9fff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>🏦</div>
+                          : <div style={{
+                              width: 38, height: 38, borderRadius: '50%',
+                              background: t.type === 'mj_credit' || t.type === 'mj_debit'
+                                ? 'linear-gradient(135deg, #f59e0b, #d97706)'
+                                : 'linear-gradient(135deg, #b96eff, #7b9fff)',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16,
+                            }}>{txIcon(t.type)}</div>
                         }
                         <div style={{ flex: 1 }}>
-                          <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--t1)' }}>
-                            {t.type === 'mj_credit' || t.type === 'mj_debit' ? BANK_NAME : other?.username ?? 'Inconnu'}
-                          </p>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--t1)' }}>
+                              {t.type === 'mj_credit' || t.type === 'mj_debit' ? BANK_NAME : other?.username ?? 'Inconnu'}
+                            </p>
+                            {(t.type === 'mj_credit' || t.type === 'mj_debit') && (
+                              <span style={{
+                                fontSize: 8, fontWeight: 800, padding: '1px 5px', borderRadius: 4,
+                                background: 'rgba(245,158,11,0.15)', color: '#f59e0b',
+                              }}>BANQUE</span>
+                            )}
+                          </div>
                           <p style={{ fontSize: 11, color: 'var(--t3)' }}>
                             {t.note || (isCredit ? 'Reçu' : 'Envoyé')} · {timeAgo(t.created_at)}
                           </p>
@@ -804,6 +1097,72 @@ export default function BankScreen({ onBack }) {
 
         {toast && <Toast msg={toast} />}
       </div>
+    </div>
+  )
+}
+
+function txIcon(type) {
+  switch (type) {
+    case 'mj_credit': return '💰'
+    case 'mj_debit':  return '⚠️'
+    case 'transfer':  return '🔄'
+    case 'purchase':  return '🛍️'
+    default:          return '🏦'
+  }
+}
+
+// Petit graphique d'évolution du solde basé sur l'historique
+function Sparkline({ transactions, currentBalance, userId }) {
+  if (!transactions.length) return null
+
+  // Reconstruire l'évolution du solde en remontant dans le temps
+  const sorted = [...transactions].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+  let running = currentBalance
+  const points = [running]
+  // On recalcule à rebours depuis maintenant
+  for (let i = sorted.length - 1; i >= 0; i--) {
+    const t = sorted[i]
+    const isCredit = t.to_user_id === userId
+    running = isCredit ? running - t.amount : running + t.amount
+    points.unshift(running)
+  }
+
+  const last7 = points.slice(-8)
+  const max = Math.max(...last7, 1)
+  const min = Math.min(...last7, 0)
+  const range = max - min || 1
+
+  const w = 260, h = 50
+  const step = w / (last7.length - 1 || 1)
+  const coords = last7.map((v, i) => [i * step, h - ((v - min) / range) * h])
+  const pathD = coords.map(([x, y], i) => `${i === 0 ? 'M' : 'L'}${x},${y}`).join(' ')
+  const areaD = `${pathD} L${w},${h} L0,${h} Z`
+
+  const trending = last7[last7.length - 1] >= last7[0]
+
+  return (
+    <div style={{
+      background: 'var(--bg2)', border: '1px solid var(--border)',
+      borderRadius: 16, padding: '12px 14px',
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+        <p style={{ fontSize: 10, color: 'var(--t3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          Évolution récente
+        </p>
+        <p style={{ fontSize: 11, fontWeight: 700, color: trending ? '#22c55e' : '#ef4444' }}>
+          {trending ? '↗' : '↘'} {trending ? 'En hausse' : 'En baisse'}
+        </p>
+      </div>
+      <svg width="100%" height={h} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="sparkGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={trending ? '#22c55e' : '#ef4444'} stopOpacity="0.3" />
+            <stop offset="100%" stopColor={trending ? '#22c55e' : '#ef4444'} stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <path d={areaD} fill="url(#sparkGrad)" />
+        <path d={pathD} fill="none" stroke={trending ? '#22c55e' : '#ef4444'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
     </div>
   )
 }
