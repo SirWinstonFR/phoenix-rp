@@ -164,7 +164,7 @@ export default function StoreScreen({ onBack }) {
 
                     {!p.is_active && (
                       <button onClick={() => equipPhone(p)} style={{
-                        padding: '7px 12px', borderRadius: 10, border: 'none',
+                        padding: '7px 12px', borderRadius: 10,
                         background: `${m.theme_color}22`,
                         border: `1px solid ${m.theme_color}44`,
                         color: m.theme_color, fontSize: 11, fontWeight: 700,
