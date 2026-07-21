@@ -146,14 +146,7 @@ export default function StoreScreen({ onBack }) {
                     display: 'flex', alignItems: 'center', gap: 12,
                   }}>
                     {/* Miniature téléphone */}
-                    <div style={{
-                      width: 44, height: 64, borderRadius: m.border_radius / 4,
-                      background: m.theme_bg,
-                      border: `2px solid ${m.theme_color}66`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 20, flexShrink: 0,
-                      boxShadow: p.is_active ? `0 0 12px ${m.theme_color}44` : 'none',
-                    }}>📱</div>
+                    <PhoneThumb phone={m} small />
 
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
@@ -413,7 +406,7 @@ export default function StoreScreen({ onBack }) {
         </div>
 
         {/* Liste */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '0 14px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div className="feed" style={{ flex: 1, padding: '0 14px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
           {loading ? (
             <div className="spinner-wrap"><div className="spinner" /></div>
           ) : filtered.map((phone, i) => {
@@ -435,14 +428,7 @@ export default function StoreScreen({ onBack }) {
                 onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.transform = 'translateY(0)' }}
               >
                 {/* Miniature */}
-                <div style={{
-                  width: 48, height: 72, borderRadius: phone.border_radius / 4,
-                  background: phone.theme_bg,
-                  border: `2px solid ${phone.theme_color}55`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 22, flexShrink: 0,
-                  boxShadow: `0 4px 12px ${phone.theme_color}22`,
-                }}>📱</div>
+                <PhoneThumb phone={phone} />
 
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
@@ -493,5 +479,86 @@ function Toast({ msg }) {
       zIndex: 200, boxShadow: '0 4px 20px rgba(0,0,0,0.6)',
       whiteSpace: 'nowrap', animation: 'fadeDown 0.2s ease',
     }}>{msg}</div>
+  )
+}
+
+// Miniature qui reflète vraiment le style du modèle (frame_style, notch, couleur)
+function PhoneThumb({ phone, small }) {
+  const w = small ? 40 : 46
+  const h = small ? 62 : 72
+  const frame = phone.frame_style ?? 'modern'
+
+  return (
+    <div style={{
+      width: w, height: h, flexShrink: 0, position: 'relative',
+      borderRadius: Math.max(6, phone.border_radius / 4),
+      background: phone.theme_bg,
+      border: `${frame === 'rugged' || frame === 'chunky' ? 3 : 2}px solid ${
+        frame === 'rugged' ? '#888' : frame === 'chunky' ? '#333' : phone.theme_color + '77'
+      }`,
+      boxShadow: `0 4px 14px ${phone.theme_color}33, inset 0 0 12px ${phone.theme_color}22`,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      overflow: 'hidden',
+    }}>
+      {/* Écran interne coloré */}
+      <div style={{
+        position: 'absolute', inset: 3,
+        borderRadius: Math.max(3, phone.border_radius / 6),
+        background: `linear-gradient(160deg, ${phone.theme_color}33, transparent 60%)`,
+      }} />
+
+      {/* Encoche selon le style */}
+      {frame === 'modern' && (
+        <div style={{
+          position: 'absolute', top: 4, left: '50%', transform: 'translateX(-50%)',
+          width: w * 0.4, height: 4, borderRadius: 3, background: '#000',
+        }} />
+      )}
+      {frame === 'curved' && (
+        <div style={{
+          position: 'absolute', top: 4, left: '50%', transform: 'translateX(-50%)',
+          width: 4, height: 4, borderRadius: '50%', background: '#000',
+        }} />
+      )}
+      {frame === 'foldable' && (
+        <div style={{
+          position: 'absolute', top: 0, bottom: 0, left: '50%', width: 1.5,
+          background: 'rgba(0,0,0,0.4)', transform: 'translateX(-50%)',
+        }} />
+      )}
+      {frame === 'chunky' && (
+        <div style={{
+          position: 'absolute', top: -2, left: '50%', transform: 'translateX(-50%)',
+          width: 3, height: 6, background: '#222', borderRadius: '2px 2px 0 0',
+        }} />
+      )}
+      {frame === 'rugged' && (
+        <>
+          {['4px','4px'].map((_, i) => null)}
+          <div style={{ position: 'absolute', top: 2, left: 2, width: 3, height: 3, borderRadius: '50%', background: '#aaa' }} />
+          <div style={{ position: 'absolute', top: 2, right: 2, width: 3, height: 3, borderRadius: '50%', background: '#aaa' }} />
+          <div style={{ position: 'absolute', bottom: 2, left: 2, width: 3, height: 3, borderRadius: '50%', background: '#aaa' }} />
+          <div style={{ position: 'absolute', bottom: 2, right: 2, width: 3, height: 3, borderRadius: '50%', background: '#aaa' }} />
+        </>
+      )}
+
+      {/* Bosse caméra modern */}
+      {frame === 'modern' && (
+        <div style={{
+          position: 'absolute', top: 8, left: 6,
+          width: 6, height: 6, borderRadius: '50%',
+          background: 'radial-gradient(circle at 35% 35%, #555, #111)',
+        }} />
+      )}
+
+      {/* Icône centrale = première lettre de la marque, colorée */}
+      <p style={{
+        fontSize: small ? 13 : 16, fontWeight: 900,
+        color: phone.theme_color, zIndex: 2,
+        textShadow: `0 0 8px ${phone.theme_color}66`,
+      }}>
+        {phone.brand?.[0] ?? '?'}
+      </p>
+    </div>
   )
 }
