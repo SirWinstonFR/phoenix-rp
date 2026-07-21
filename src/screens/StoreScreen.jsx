@@ -397,7 +397,7 @@ export default function StoreScreen({ onBack }) {
           {[['all','Tous'],['new','Neuf'],['used','Occasion']].map(([val, label]) => (
             <button key={val} onClick={() => setFilter(val)} style={{
               padding: '5px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700,
-              cursor: 'pointer', fontFamily: 'inherit', border: 'none',
+              cursor: 'pointer', fontFamily: 'inherit',
               background: filter === val ? 'var(--accent)' : 'var(--glass)',
               color: filter === val ? '#fff' : 'var(--t3)',
               border: filter === val ? 'none' : '1px solid var(--border)',

@@ -353,7 +353,7 @@ export default function BankScreen({ onBack }) {
             </div>
 
             <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <DetailRow label={isCredit ? 'De' : 'Vers'} value={other?.username ?? selectedTx.type === 'mj_credit' || selectedTx.type === 'mj_debit' ? BANK_NAME : 'Inconnu'} />
+              <DetailRow label={isCredit ? 'De' : 'Vers'} value={other?.username ?? ((selectedTx.type === 'mj_credit' || selectedTx.type === 'mj_debit') ? BANK_NAME : 'Inconnu')} />
               {selectedTx.note && <DetailRow label="Note" value={selectedTx.note} />}
               <DetailRow label="Type" value={
                 selectedTx.type === 'transfer' ? 'Transfert entre joueurs' :
