@@ -9,11 +9,23 @@ const BANK_NAME = 'Desert Valley Bank'
 
 export default function BankScreen({ onBack }) {
   const { user, profile, updateProfile } = useAuth()
-  const [view, setView]           = useState('home') // 'home' | 'send' | 'savings'
+  const [view, setView]           = useState('home') // 'home' | 'send' | 'savings' | 'mj-panel'
   const [transactions, setTransactions] = useState([])
   const [loading, setLoading]     = useState(true)
   const [showBalance, setShowBalance] = useState(true)
   const [cardFlipped, setCardFlipped] = useState(false)
+  const [historyFilter, setHistoryFilter] = useState('all') // 'all' | 'sent' | 'received'
+  const [selectedTx, setSelectedTx] = useState(null)
+  const [confirmSend, setConfirmSend] = useState(false)
+
+  // Panel MJ
+  const [mjSearch, setMjSearch]     = useState('')
+  const [mjResults, setMjResults]   = useState([])
+  const [mjTarget, setMjTarget]     = useState(null)
+  const [mjAmount, setMjAmount]     = useState('')
+  const [mjNote, setMjNote]         = useState('')
+  const [mjMode, setMjMode]         = useState('credit') // 'credit' | 'debit'
+  const [mjLoading, setMjLoading]   = useState(false)
 
   const [savings, setSavings]     = useState(0)
   const [savingsAmount, setSavingsAmount] = useState('')
@@ -107,12 +119,50 @@ export default function BankScreen({ onBack }) {
       setToast(`✅ $${amt.toLocaleString()} envoyés à ${recipient.username}`)
       setTimeout(() => setToast(null), 3000)
       setView('home')
-      setRecipient(null); setAmount(''); setNote(''); setSearchQuery(''); setSearchResults([])
+      setRecipient(null); setAmount(''); setNote(''); setSearchQuery(''); setSearchResults([]); setConfirmSend(false)
       fetchTransactions()
     } catch (e) {
       setError('Erreur lors du transfert.')
     }
     setSending(false)
+  }
+
+  async function mjSearchUsers(query) {
+    setMjSearch(query)
+    if (query.trim().length < 2) { setMjResults([]); return }
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, username, initials, avatar_color, avatar_url, balance')
+      .ilike('username', `%${query.trim()}%`)
+      .limit(10)
+    setMjResults(data ?? [])
+  }
+
+  async function mjExecute() {
+    const amt = parseInt(mjAmount)
+    if (!mjTarget || !amt || amt <= 0) return
+    setMjLoading(true)
+    try {
+      const currentBalance = mjTarget.balance ?? 0
+      const newBalance = mjMode === 'credit' ? currentBalance + amt : Math.max(0, currentBalance - amt)
+
+      await supabase.from('profiles').update({ balance: newBalance }).eq('id', mjTarget.id)
+      await supabase.from('transactions').insert({
+        from_user_id: mjMode === 'debit' ? mjTarget.id : null,
+        to_user_id:   mjTarget.id,
+        amount:       amt,
+        type:         mjMode === 'credit' ? 'mj_credit' : 'mj_debit',
+        note:         mjNote.trim() || (mjMode === 'credit' ? 'Crédit banque centrale' : 'Débit banque centrale'),
+      })
+
+      setToast(`✅ ${mjMode === 'credit' ? 'Crédité' : 'Débité'} : $${amt.toLocaleString()} pour ${mjTarget.username}`)
+      setTimeout(() => setToast(null), 3000)
+      setMjTarget(null); setMjAmount(''); setMjNote(''); setMjSearch(''); setMjResults([])
+      fetchTransactions()
+    } catch (e) {
+      setToast('❌ Erreur MJ')
+    }
+    setMjLoading(false)
   }
 
   async function handleSavingsAction() {
@@ -141,6 +191,182 @@ export default function BankScreen({ onBack }) {
   // Numéro de carte 100% numérique généré depuis l'user id
   const cardDigits = (user?.id ?? '0000000000000000').replace(/[^0-9]/g, '').padEnd(16, '4').slice(0, 16)
   const cardNumber = cardDigits.match(/.{1,4}/g).join(' ')
+
+  // ── VUE PANEL MJ ──
+  if (view === 'mj-panel') {
+    return (
+      <div className="phone">
+        <StatusBar />
+        <div className="screen">
+          <div className="app-header">
+            <button className="icon-btn" onClick={() => { setView('home'); setMjTarget(null) }}>←</button>
+            <span className="app-header-title" style={{ color: '#f59e0b' }}>⚙️ Panel MJ</span>
+            <span style={{ width: 32 }} />
+          </div>
+
+          <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+            {!mjTarget ? (
+              <>
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  background: 'var(--bg2)', borderRadius: 14, padding: '10px 14px',
+                  border: '1px solid var(--border)',
+                }}>
+                  <span style={{ fontSize: 16 }}>🔍</span>
+                  <input
+                    autoFocus
+                    placeholder="Rechercher un joueur…"
+                    value={mjSearch}
+                    onChange={e => mjSearchUsers(e.target.value)}
+                    style={{ flex: 1, background: 'none', border: 'none', color: 'var(--t1)', fontSize: 14, outline: 'none', fontFamily: 'inherit' }}
+                  />
+                </div>
+
+                {mjResults.map(u => (
+                  <div key={u.id} onClick={() => setMjTarget(u)} style={{
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    padding: '10px 12px', borderRadius: 14,
+                    background: 'var(--bg2)', border: '1px solid var(--border)',
+                    cursor: 'pointer',
+                  }}>
+                    <Avatar profile={u} size={40} />
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--t1)' }}>{u.username}</p>
+                      <p style={{ fontSize: 11, color: 'var(--t3)' }}>Solde : ${(u.balance ?? 0).toLocaleString()}</p>
+                    </div>
+                  </div>
+                ))}
+              </>
+            ) : (
+              <>
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '14px', borderRadius: 16,
+                  background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.15)',
+                }}>
+                  <Avatar profile={mjTarget} size={44} />
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--t1)' }}>{mjTarget.username}</p>
+                    <p style={{ fontSize: 11, color: 'var(--t3)' }}>Solde actuel : ${(mjTarget.balance ?? 0).toLocaleString()}</p>
+                  </div>
+                  <button onClick={() => setMjTarget(null)} style={{ background: 'none', border: 'none', color: 'var(--t3)', fontSize: 16, cursor: 'pointer' }}>✕</button>
+                </div>
+
+                <div style={{ display: 'flex', gap: 8, background: 'var(--bg2)', padding: 4, borderRadius: 14 }}>
+                  {[['credit', '+ Créditer'], ['debit', '− Débiter']].map(([val, label]) => (
+                    <button key={val} onClick={() => setMjMode(val)} style={{
+                      flex: 1, padding: '10px', borderRadius: 10, border: 'none',
+                      background: mjMode === val ? (val === 'credit' ? '#22c55e' : '#ef4444') : 'transparent',
+                      color: mjMode === val ? '#fff' : 'var(--t3)',
+                      fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                    }}>{label}</button>
+                  ))}
+                </div>
+
+                <div style={{ textAlign: 'center', padding: '10px 0' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                    <span style={{ fontSize: 28, fontWeight: 800, color: mjMode === 'credit' ? '#22c55e' : '#ef4444' }}>$</span>
+                    <input
+                      autoFocus
+                      type="number"
+                      value={mjAmount}
+                      onChange={e => setMjAmount(e.target.value)}
+                      placeholder="0"
+                      style={{
+                        width: 140, background: 'none', border: 'none',
+                        fontSize: 36, fontWeight: 800, color: 'var(--t1)',
+                        textAlign: 'center', outline: 'none', fontFamily: 'inherit',
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <input
+                  placeholder="Raison (optionnel) — ex: Salaire, Amende…"
+                  value={mjNote}
+                  onChange={e => setMjNote(e.target.value)}
+                  style={{
+                    background: 'var(--bg2)', border: '1px solid var(--border)',
+                    borderRadius: 12, padding: '10px 14px',
+                    color: 'var(--t1)', fontSize: 13, fontFamily: 'inherit', outline: 'none',
+                  }}
+                />
+
+                <button
+                  onClick={mjExecute}
+                  disabled={mjLoading || !mjAmount}
+                  style={{
+                    padding: '14px', borderRadius: 14, border: 'none',
+                    background: mjMode === 'credit'
+                      ? 'linear-gradient(135deg, #22c55e, #16a34a)'
+                      : 'linear-gradient(135deg, #ef4444, #dc2626)',
+                    color: '#fff', fontSize: 15, fontWeight: 800,
+                    cursor: 'pointer', fontFamily: 'inherit',
+                    opacity: mjAmount ? 1 : 0.5,
+                  }}
+                >
+                  {mjLoading ? 'Traitement…' : `${mjMode === 'credit' ? 'Créditer' : 'Débiter'} $${mjAmount || 0}`}
+                </button>
+              </>
+            )}
+          </div>
+          {toast && <Toast msg={toast} />}
+        </div>
+      </div>
+    )
+  }
+
+  // ── VUE DÉTAIL TRANSACTION ──
+  if (selectedTx) {
+    const isSender = selectedTx.from_user_id === user.id
+    const other = isSender ? selectedTx.toProfile : selectedTx.fromProfile
+    const isCredit = !isSender
+
+    return (
+      <div className="phone">
+        <StatusBar />
+        <div className="screen">
+          <div className="app-header">
+            <button className="icon-btn" onClick={() => setSelectedTx(null)}>←</button>
+            <span className="app-header-title">Détail</span>
+            <span style={{ width: 32 }} />
+          </div>
+
+          <div style={{ flex: 1, padding: '30px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
+            <div style={{
+              width: 64, height: 64, borderRadius: '50%',
+              background: isCredit ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)',
+              border: `2px solid ${isCredit ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28,
+            }}>
+              {isCredit ? '↙️' : '↗️'}
+            </div>
+
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ fontSize: 34, fontWeight: 900, color: isCredit ? '#22c55e' : '#ef4444' }}>
+                {isCredit ? '+' : '-'}${selectedTx.amount.toLocaleString()}
+              </p>
+              <p style={{ fontSize: 13, color: 'var(--t3)', marginTop: 4 }}>
+                {new Date(selectedTx.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              </p>
+            </div>
+
+            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <DetailRow label={isCredit ? 'De' : 'Vers'} value={other?.username ?? selectedTx.type === 'mj_credit' || selectedTx.type === 'mj_debit' ? BANK_NAME : 'Inconnu'} />
+              {selectedTx.note && <DetailRow label="Note" value={selectedTx.note} />}
+              <DetailRow label="Type" value={
+                selectedTx.type === 'transfer' ? 'Transfert entre joueurs' :
+                selectedTx.type === 'mj_credit' ? 'Crédit banque centrale' :
+                selectedTx.type === 'mj_debit' ? 'Débit banque centrale' : 'Achat'
+              } />
+              <DetailRow label="ID Transaction" value={selectedTx.id.slice(0, 8).toUpperCase()} mono />
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   // ── VUE ÉPARGNE ──
   if (view === 'savings') {
@@ -238,7 +464,7 @@ export default function BankScreen({ onBack }) {
         <StatusBar />
         <div className="screen">
           <div className="app-header">
-            <button className="icon-btn" onClick={() => { setView('home'); setRecipient(null); setAmount('') }}>←</button>
+            <button className="icon-btn" onClick={() => { setView('home'); setRecipient(null); setAmount(''); setConfirmSend(false) }}>←</button>
             <span className="app-header-title">Envoyer</span>
             <span style={{ width: 32 }} />
           </div>
@@ -286,7 +512,7 @@ export default function BankScreen({ onBack }) {
                     <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--t1)' }}>{recipient.username}</p>
                     <p style={{ fontSize: 11, color: 'var(--t3)' }}>Destinataire</p>
                   </div>
-                  <button onClick={() => setRecipient(null)} style={{ background: 'none', border: 'none', color: 'var(--t3)', fontSize: 16, cursor: 'pointer' }}>✕</button>
+                  <button onClick={() => { setRecipient(null); setConfirmSend(false) }} style={{ background: 'none', border: 'none', color: 'var(--t3)', fontSize: 16, cursor: 'pointer' }}>✕</button>
                 </div>
 
                 <div style={{ textAlign: 'center', padding: '20px 0' }}>
@@ -324,9 +550,36 @@ export default function BankScreen({ onBack }) {
 
                 {error && <p className="form-error">{error}</p>}
 
-                <button onClick={sendMoney} disabled={sending || !amount} className="btn-primary" style={{ marginTop: 'auto' }}>
-                  {sending ? 'Envoi…' : `Envoyer $${amount || 0}`}
-                </button>
+                {!confirmSend ? (
+                  <button
+                    onClick={() => { if (amount && parseInt(amount) > 0) setConfirmSend(true) }}
+                    disabled={!amount}
+                    className="btn-primary"
+                    style={{ marginTop: 'auto' }}
+                  >
+                    Continuer
+                  </button>
+                ) : (
+                  <div style={{
+                    marginTop: 'auto', background: 'var(--bg2)', border: '1px solid var(--border)',
+                    borderRadius: 16, padding: '16px', display: 'flex', flexDirection: 'column', gap: 12,
+                  }}>
+                    <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--t1)', textAlign: 'center' }}>
+                      Confirmer l'envoi de <span style={{ color: 'var(--accent)' }}>${parseInt(amount).toLocaleString()}</span> à <b>{recipient.username}</b> ?
+                    </p>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button onClick={() => setConfirmSend(false)} style={{
+                        flex: 1, padding: '12px', borderRadius: 12,
+                        background: 'var(--glass)', border: '1px solid var(--border)',
+                        color: 'var(--t2)', fontSize: 13, fontWeight: 700,
+                        cursor: 'pointer', fontFamily: 'inherit',
+                      }}>Annuler</button>
+                      <button onClick={sendMoney} disabled={sending} className="btn-primary" style={{ flex: 1, padding: '12px' }}>
+                        {sending ? 'Envoi…' : 'Confirmer ✓'}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -344,7 +597,7 @@ export default function BankScreen({ onBack }) {
         <div className="app-header" style={{ background: 'transparent', border: 'none' }}>
           <button className="icon-btn" onClick={onBack}>←</button>
           <span className="app-header-title">💳 {BANK_NAME}</span>
-          {isMJ ? <button className="icon-btn">⚙️</button> : <span style={{ width: 32 }} />}
+          {isMJ ? <button className="icon-btn" onClick={() => setView('mj-panel')}>⚙️</button> : <span style={{ width: 32 }} />}
         </div>
 
         <div style={{ flex: 1, overflowY: 'auto', scrollbarWidth: 'none' }}>
@@ -475,51 +728,95 @@ export default function BankScreen({ onBack }) {
 
           {/* HISTORIQUE */}
           <div style={{ padding: '0 16px' }}>
-            <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10, paddingLeft: 4 }}>
-              Transactions récentes
-            </p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.1em', paddingLeft: 4 }}>
+                Transactions
+              </p>
+              <div style={{ display: 'flex', gap: 4 }}>
+                {[['all','Tout'],['received','Reçu'],['sent','Envoyé']].map(([val, label]) => (
+                  <button key={val} onClick={() => setHistoryFilter(val)} style={{
+                    padding: '4px 10px', borderRadius: 8, fontSize: 10, fontWeight: 700,
+                    cursor: 'pointer', fontFamily: 'inherit', border: 'none',
+                    background: historyFilter === val ? 'var(--accent)' : 'var(--glass)',
+                    color: historyFilter === val ? '#fff' : 'var(--t3)',
+                  }}>{label}</button>
+                ))}
+              </div>
+            </div>
 
             {loading ? (
               <div className="spinner-wrap" style={{ padding: '20px 0' }}><div className="spinner" /></div>
-            ) : transactions.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '30px 16px', color: 'var(--t3)' }}>
-                <p style={{ fontSize: 13 }}>Aucune transaction pour l'instant</p>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                {transactions.map(t => {
-                  const isSender = t.from_user_id === user.id
-                  const other = isSender ? t.toProfile : t.fromProfile
-                  const isCredit = !isSender
+            ) : (() => {
+              const filteredTx = transactions.filter(t => {
+                if (historyFilter === 'all') return true
+                const isSender = t.from_user_id === user.id
+                return historyFilter === 'sent' ? isSender : !isSender
+              })
+              if (filteredTx.length === 0) return (
+                <div style={{ textAlign: 'center', padding: '30px 16px', color: 'var(--t3)' }}>
+                  <p style={{ fontSize: 13 }}>Aucune transaction</p>
+                </div>
+              )
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {filteredTx.map(t => {
+                    const isSender = t.from_user_id === user.id
+                    const other = isSender ? t.toProfile : t.fromProfile
+                    const isCredit = !isSender
 
-                  return (
-                    <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 8px', borderRadius: 12 }}>
-                      {other
-                        ? <Avatar profile={other} size={38} />
-                        : <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'linear-gradient(135deg, #b96eff, #7b9fff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>🏦</div>
-                      }
-                      <div style={{ flex: 1 }}>
-                        <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--t1)' }}>
-                          {t.type === 'mj_credit' ? BANK_NAME : other?.username ?? 'Inconnu'}
+                    return (
+                      <div
+                        key={t.id}
+                        onClick={() => setSelectedTx(t)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 12,
+                          padding: '10px 8px', borderRadius: 12, cursor: 'pointer',
+                          transition: 'background 0.15s',
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg2)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                      >
+                        {other
+                          ? <Avatar profile={other} size={38} />
+                          : <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'linear-gradient(135deg, #b96eff, #7b9fff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>🏦</div>
+                        }
+                        <div style={{ flex: 1 }}>
+                          <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--t1)' }}>
+                            {t.type === 'mj_credit' || t.type === 'mj_debit' ? BANK_NAME : other?.username ?? 'Inconnu'}
+                          </p>
+                          <p style={{ fontSize: 11, color: 'var(--t3)' }}>
+                            {t.note || (isCredit ? 'Reçu' : 'Envoyé')} · {timeAgo(t.created_at)}
+                          </p>
+                        </div>
+                        <p style={{ fontSize: 14, fontWeight: 800, color: isCredit ? '#22c55e' : '#ef4444' }}>
+                          {isCredit ? '+' : '-'}${t.amount.toLocaleString()}
                         </p>
-                        <p style={{ fontSize: 11, color: 'var(--t3)' }}>
-                          {t.note || (isCredit ? 'Reçu' : 'Envoyé')} · {timeAgo(t.created_at)}
-                        </p>
+                        <span style={{ color: 'var(--t3)', fontSize: 14 }}>›</span>
                       </div>
-                      <p style={{ fontSize: 14, fontWeight: 800, color: isCredit ? '#22c55e' : '#ef4444' }}>
-                        {isCredit ? '+' : '-'}${t.amount.toLocaleString()}
-                      </p>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
+                    )
+                  })}
+                </div>
+              )
+            })()}
           </div>
 
         </div>
 
         {toast && <Toast msg={toast} />}
       </div>
+    </div>
+  )
+}
+
+function DetailRow({ label, value, mono }) {
+  return (
+    <div style={{
+      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+      padding: '12px 14px', background: 'var(--bg2)', borderRadius: 12,
+      border: '1px solid var(--border)',
+    }}>
+      <p style={{ fontSize: 12, color: 'var(--t3)' }}>{label}</p>
+      <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--t1)', fontFamily: mono ? 'monospace' : 'inherit' }}>{value}</p>
     </div>
   )
 }
