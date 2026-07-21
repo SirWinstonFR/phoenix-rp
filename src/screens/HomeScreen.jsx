@@ -114,6 +114,13 @@ export default function HomeScreen({ onOpenApp, onSwitchToDesktop, phoneTheme })
 
   return (
     <div className="phone" onClick={() => editMode && setEditMode(false)}>
+      <div className="phone-cam-bump" />
+      <div className="phone-crease" />
+      <div className="phone-antenna" />
+      <div className="phone-bolt tl" />
+      <div className="phone-bolt tr" />
+      <div className="phone-bolt bl" />
+      <div className="phone-bolt br" />
       <StatusBar />
       <div className="home-wrap">
 

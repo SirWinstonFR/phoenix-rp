@@ -44,8 +44,8 @@ body {
   border-radius: var(--phone-radius, 48px);
   border: 1px solid var(--phone-border, rgba(255,255,255,0.1));
   box-shadow:
-    0 0 0 6px var(--phone-shell, #0c0c0c),
-    0 0 0 8px var(--phone-shell-2, rgba(255,255,255,0.05)),
+    0 0 0 var(--phone-shell-w, 6px) var(--phone-shell, #0c0c0c),
+    0 0 0 calc(var(--phone-shell-w, 6px) + 2px) var(--phone-shell-2, rgba(255,255,255,0.05)),
     0 40px 100px rgba(0,0,0,0.95),
     0 0 80px var(--phone-glow, rgba(185,110,255,0.07)),
     inset 0 1px 0 rgba(255,255,255,0.08);
@@ -55,19 +55,20 @@ body {
   position: relative;
 }
 
-/* Encoche */
+/* Encoche — forme dynamique selon le modèle */
 .phone::before {
   content: '';
   position: absolute;
   top: 12px;
   left: 50%;
   transform: translateX(-50%);
-  width: 88px;
-  height: 24px;
+  width: var(--phone-notch-w, 88px);
+  height: var(--phone-notch-h, 24px);
   background: #000;
-  border-radius: 20px;
+  border-radius: var(--phone-notch-radius, 20px);
   z-index: 200;
   box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
+  display: var(--phone-notch-display, block);
 }
 
 /* Reflet latéral */
@@ -79,7 +80,92 @@ body {
   background: linear-gradient(180deg, rgba(255,255,255,0.025) 0%, transparent 100%);
   pointer-events: none;
   z-index: 1;
-  border-radius: 48px 48px 0 0;
+  border-radius: var(--phone-radius, 48px) var(--phone-radius, 48px) 0 0;
+}
+
+/* ── SILHOUETTE / CHÂSSIS DU TÉLÉPHONE ── */
+.phone-shell-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+/* Bouton power (droite) */
+.phone-shell-wrap::before {
+  content: '';
+  position: absolute;
+  right: -3px;
+  top: var(--phone-power-top, 140px);
+  width: 4px;
+  height: var(--phone-power-h, 56px);
+  background: var(--phone-shell, #0c0c0c);
+  border-radius: 0 3px 3px 0;
+  display: var(--phone-buttons-display, none);
+  box-shadow: 1px 0 3px rgba(0,0,0,0.4);
+}
+
+/* Boutons volume (gauche) */
+.phone-shell-wrap::after {
+  content: '';
+  position: absolute;
+  left: -3px;
+  top: var(--phone-vol-top, 120px);
+  width: 4px;
+  height: var(--phone-vol-h, 70px);
+  background: var(--phone-shell, #0c0c0c);
+  border-radius: 3px 0 0 3px;
+  display: var(--phone-buttons-display, none);
+  box-shadow: -1px 0 3px rgba(0,0,0,0.4);
+}
+
+/* Bosse caméra (coin haut gauche, style moderne) */
+.phone-cam-bump {
+  position: absolute;
+  top: 22px; left: 22px;
+  width: var(--phone-cambump-size, 0px);
+  height: var(--phone-cambump-size, 0px);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #444, #111);
+  border: 1px solid rgba(255,255,255,0.15);
+  z-index: 210;
+  display: var(--phone-cambump-display, none);
+}
+
+/* Ligne de pli (foldable) */
+.phone-crease {
+  position: absolute;
+  top: 0; bottom: 0; left: 50%;
+  width: 2px;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, transparent, rgba(0,0,0,0.35) 10%, rgba(0,0,0,0.35) 90%, transparent);
+  z-index: 205;
+  display: var(--phone-crease-display, none);
+  pointer-events: none;
+}
+
+/* Boulons (rugged) */
+.phone-bolt {
+  position: absolute;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #999, #333);
+  border: 1px solid rgba(0,0,0,0.4);
+  z-index: 210;
+  display: var(--phone-bolts-display, none);
+}
+.phone-bolt.tl { top: 10px; left: 10px; }
+.phone-bolt.tr { top: 10px; right: 10px; }
+.phone-bolt.bl { bottom: 10px; left: 10px; }
+.phone-bolt.br { bottom: 10px; right: 10px; }
+
+/* Antenne / barre chunky (Nokia-like) */
+.phone-antenna {
+  position: absolute;
+  top: -8px; left: 50%; transform: translateX(-50%);
+  width: 6px; height: 14px;
+  background: var(--phone-shell, #0c0c0c);
+  border-radius: 3px 3px 0 0;
+  z-index: 199;
+  display: var(--phone-antenna-display, none);
 }
 
 /* ── BARRE STATUT ── */

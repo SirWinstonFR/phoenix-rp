@@ -19,17 +19,61 @@ const SCREENS = {
   store:     StoreScreen,
 }
 
+// Calcule les variables CSS de silhouette selon le style de châssis
+function getFrameVars(frameStyle) {
+  switch (frameStyle) {
+    case 'curved': // Samsung-like : coins très arrondis, punch-hole, boutons visibles
+      return {
+        '--phone-notch-w': '14px',
+        '--phone-notch-h': '14px',
+        '--phone-notch-radius': '50%',
+        '--phone-buttons-display': 'block',
+        '--phone-shell-w': '5px',
+      }
+    case 'chunky': // Nokia/BudgetPhone : bords épais, pas d'encoche, antenne
+      return {
+        '--phone-notch-display': 'none',
+        '--phone-shell-w': '12px',
+        '--phone-antenna-display': 'block',
+        '--phone-buttons-display': 'none',
+      }
+    case 'rugged': // IronPhone : très épais, boulons aux coins
+      return {
+        '--phone-notch-display': 'none',
+        '--phone-shell-w': '14px',
+        '--phone-bolts-display': 'block',
+        '--phone-buttons-display': 'block',
+      }
+    case 'foldable': // Flip Z4 : pli au milieu
+      return {
+        '--phone-notch-w': '12px',
+        '--phone-notch-h': '12px',
+        '--phone-notch-radius': '50%',
+        '--phone-crease-display': 'block',
+        '--phone-shell-w': '5px',
+      }
+    case 'modern': // PhoenixX, PixPhone : bosse caméra discrète
+    default:
+      return {
+        '--phone-notch-w': '80px',
+        '--phone-notch-h': '22px',
+        '--phone-notch-radius': '18px',
+        '--phone-cambump-display': 'block',
+        '--phone-cambump-size': '10px',
+        '--phone-shell-w': '6px',
+      }
+  }
+}
+
 export default function App() {
   const { user, loading, profile } = useAuth()
   const [currentScreen, setCurrentScreen] = useState('home')
   const [mode, setMode] = useState(() => {
-    // Lire le mode choisi avant la redirection Discord
     return localStorage.getItem('rp_mode') ?? 'phone'
   })
   const touchStartY = useRef(null)
 
   useEffect(() => {
-    // Nettoyer après lecture
     localStorage.removeItem('rp_mode')
   }, [])
 
@@ -62,12 +106,7 @@ export default function App() {
 
   // Thème du téléphone équipé
   const phoneTheme = profile?.phone_theme
-  const themeVars = phoneTheme ? {
-    '--accent':      phoneTheme.color,
-    '--accent2':     phoneTheme.color,
-    '--glow':        phoneTheme.color + '33',
-    '--grad':        `linear-gradient(135deg, ${phoneTheme.color}, #7b9fff)`,
-  } : {}
+  const frameVars  = getFrameVars(phoneTheme?.frame_style)
 
   if (mode === 'desktop') {
     return <DesktopMode onSwitchToPhone={() => setMode('phone')} />
@@ -76,22 +115,18 @@ export default function App() {
   const Screen = SCREENS[currentScreen] ?? HomeScreen
 
   return (
-    <div
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-      style={{ display: 'contents', ...themeVars }}
-    >
-      {/* Wrapper qui applique le thème au téléphone */}
+    <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} style={{ display: 'contents' }}>
       <div style={{
         display: 'contents',
-        '--accent':       phoneTheme?.color ?? '#b96eff',
-        '--grad':         phoneTheme ? `linear-gradient(135deg, ${phoneTheme.color}, #7b9fff)` : 'linear-gradient(135deg, #b96eff, #7b9fff)',
+        '--accent':        phoneTheme?.color ?? '#b96eff',
+        '--grad':          phoneTheme ? `linear-gradient(135deg, ${phoneTheme.color}, #7b9fff)` : 'linear-gradient(135deg, #b96eff, #7b9fff)',
         '--phone-bg':      phoneTheme?.bg ?? '#080808',
         '--phone-radius':  phoneTheme ? `${phoneTheme.border_radius}px` : '48px',
         '--phone-glow':    phoneTheme ? `${phoneTheme.color}22` : 'rgba(185,110,255,0.07)',
         '--phone-shell':   phoneTheme?.shell ?? '#0c0c0c',
         '--phone-shell-2': phoneTheme?.shell ? phoneTheme.shell + '88' : 'rgba(255,255,255,0.05)',
         '--phone-border':  phoneTheme ? `${phoneTheme.color}33` : 'rgba(255,255,255,0.1)',
+        ...frameVars,
       }}>
         <Screen
           onOpenApp={appId => {
