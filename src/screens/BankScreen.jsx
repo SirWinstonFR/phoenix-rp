@@ -3,11 +3,12 @@ import { supabase } from '../supabase'
 import { useAuth } from '../context/AuthContext'
 import StatusBar from '../components/StatusBar'
 import Avatar from '../components/Avatar'
+import InvestScreen from './InvestScreen'
 
 const MJ_DISCORD_ID = '804959890291294209'
 const BANK_NAME = 'Desert Valley Bank'
 
-export default function BankScreen({ onBack }) {
+export default function BankScreen({ onBack, onOpenApp }) {
   const { user, profile, updateProfile } = useAuth()
   const [view, setView]           = useState('home') // 'home' | 'send' | 'savings' | 'mj-panel' | 'request' | 'receive'
   const [transactions, setTransactions] = useState([])
@@ -277,6 +278,11 @@ export default function BankScreen({ onBack }) {
   const cardDigits = (user?.id ?? '0000000000000000').replace(/[^0-9]/g, '').padEnd(16, '4').slice(0, 16)
   const cardNumber = cardDigits.match(/.{1,4}/g).join(' ')
 
+  // ── VUE BOURSE (intégrée) ──
+  if (view === 'invest') {
+    return <InvestScreen onBack={() => setView('home')} />
+  }
+
   // ── VUE PANEL MJ ──
   if (view === 'mj-panel') {
     return (
@@ -360,8 +366,8 @@ export default function BankScreen({ onBack }) {
                       placeholder="0"
                       style={{
                         width: 140, background: 'none', border: 'none',
-                        fontSize: 36, fontWeight: 800, color: 'var(--t1)',
-                        textAlign: 'center', outline: 'none', fontFamily: 'inherit',
+                        fontSize: 36, fontWeight: 700, color: 'var(--t1)',
+                        textAlign: 'center', outline: 'none', fontFamily: "'Space Grotesk', monospace", letterSpacing: -1,
                       }}
                     />
                   </div>
@@ -429,7 +435,7 @@ export default function BankScreen({ onBack }) {
             </div>
 
             <div style={{ textAlign: 'center' }}>
-              <p style={{ fontSize: 34, fontWeight: 900, color: isCredit ? '#22c55e' : '#ef4444' }}>
+              <p style={{ fontSize: 34, fontWeight: 700, color: isCredit ? '#22c55e' : '#ef4444', fontFamily: "'Space Grotesk', monospace", letterSpacing: -1 }}>
                 {isCredit ? '+' : '-'}${selectedTx.amount.toLocaleString()}
               </p>
               <p style={{ fontSize: 13, color: 'var(--t3)', marginTop: 4 }}>
@@ -629,7 +635,7 @@ export default function BankScreen({ onBack }) {
               <div style={{ position: 'absolute', top: -30, right: -30, width: 140, height: 140, borderRadius: '50%', background: 'radial-gradient(circle, rgba(34,197,94,0.12), transparent 70%)' }} />
               <p style={{ fontSize: 32, marginBottom: 8 }}>🏦</p>
               <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.1em', marginBottom: 6 }}>ÉPARGNE TOTALE</p>
-              <p style={{ fontSize: 34, fontWeight: 900, color: '#4ade80', letterSpacing: -1 }}>
+              <p style={{ fontSize: 34, fontWeight: 700, color: '#4ade80', letterSpacing: -1.5, fontFamily: "'Space Grotesk', monospace" }}>
                 ${savings.toLocaleString()}
               </p>
             </div>
@@ -660,8 +666,8 @@ export default function BankScreen({ onBack }) {
                   placeholder="0"
                   style={{
                     width: 140, background: 'none', border: 'none',
-                    fontSize: 36, fontWeight: 800, color: 'var(--t1)',
-                    textAlign: 'center', outline: 'none', fontFamily: 'inherit',
+                    fontSize: 36, fontWeight: 700, color: 'var(--t1)',
+                    textAlign: 'center', outline: 'none', fontFamily: "'Space Grotesk', monospace", letterSpacing: -1,
                   }}
                 />
               </div>
@@ -764,8 +770,8 @@ export default function BankScreen({ onBack }) {
                       placeholder="0"
                       style={{
                         width: 160, background: 'none', border: 'none',
-                        fontSize: 40, fontWeight: 800, color: 'var(--t1)',
-                        textAlign: 'center', outline: 'none', fontFamily: 'inherit',
+                        fontSize: 40, fontWeight: 700, color: 'var(--t1)',
+                        textAlign: 'center', outline: 'none', fontFamily: "'Space Grotesk', monospace", letterSpacing: -1,
                       }}
                     />
                   </div>
@@ -872,7 +878,7 @@ export default function BankScreen({ onBack }) {
 
                   <div style={{ zIndex: 1 }}>
                     <p style={{
-                      fontSize: 16, fontFamily: 'monospace', letterSpacing: 2,
+                      fontSize: 16, fontFamily: "'Space Grotesk', monospace", letterSpacing: 3, fontWeight: 600,
                       color: 'rgba(255,255,255,0.85)', marginBottom: 10,
                     }}>{showBalance ? cardNumber : '•••• •••• •••• ••••'}</p>
 
@@ -926,7 +932,7 @@ export default function BankScreen({ onBack }) {
                 {showBalance ? '👁️' : '🙈'}
               </button>
             </div>
-            <p style={{ fontSize: 38, fontWeight: 900, color: '#fff', letterSpacing: -1 }}>
+            <p style={{ fontSize: 38, fontWeight: 700, color: '#fff', letterSpacing: -1.5, fontFamily: "'Space Grotesk', monospace" }}>
               {showBalance ? `$${balance.toLocaleString()}` : '••••••'}
             </p>
             {savings > 0 && (
@@ -942,17 +948,18 @@ export default function BankScreen({ onBack }) {
           </div>
 
           {/* ACTIONS — design premium */}
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 14, padding: '0 20px 20px' }}>
+          <div style={{ display: 'flex', gap: 12, padding: '0 20px 20px', overflowX: 'auto', scrollbarWidth: 'none' }}>
             {[
               { icon: '↗️', label: 'Envoyer',  action: () => setView('send'), grad: 'linear-gradient(135deg, #b96eff, #7b9fff)' },
               { icon: '📷', label: 'Recevoir', action: () => setView('receive'), grad: 'linear-gradient(135deg, #4dd9ff, #2563eb)' },
               { icon: '🙋', label: 'Demander', action: () => setView('request'), grad: 'linear-gradient(135deg, #f59e0b, #d97706)' },
               { icon: '🏦', label: 'Épargne',  action: () => setView('savings'), grad: 'linear-gradient(135deg, #22c55e, #16a34a)' },
+              { icon: '📊', label: 'Bourse',   action: () => setView('invest'), grad: 'linear-gradient(135deg, #ec4899, #db2777)' },
             ].map(a => (
               <button key={a.label} onClick={a.action} style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
                 background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                flex: 1,
+                flexShrink: 0, width: 54,
               }}>
                 <div style={{
                   width: 48, height: 48, borderRadius: 16,
@@ -1081,7 +1088,7 @@ export default function BankScreen({ onBack }) {
                             {t.note || (isCredit ? 'Reçu' : 'Envoyé')} · {timeAgo(t.created_at)}
                           </p>
                         </div>
-                        <p style={{ fontSize: 14, fontWeight: 800, color: isCredit ? '#22c55e' : '#ef4444' }}>
+                        <p style={{ fontSize: 14, fontWeight: 700, color: isCredit ? '#22c55e' : '#ef4444', fontFamily: "'Space Grotesk', monospace" }}>
                           {isCredit ? '+' : '-'}${t.amount.toLocaleString()}
                         </p>
                         <span style={{ color: 'var(--t3)', fontSize: 14 }}>›</span>
