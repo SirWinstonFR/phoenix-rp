@@ -50,6 +50,7 @@ export default function MapScreen({ onBack }) {
   const mapContainer = useRef(null)
   const mapRef       = useRef(null)
   const markersRef   = useRef({})
+  const logoElsRef   = useRef({})
 
   const [players, setPlayers]         = useState([])
   const [locations, setLocations]     = useState([])
@@ -220,6 +221,15 @@ export default function MapScreen({ onBack }) {
       fetchLocations()
     })
 
+    // Redimensionner les marqueurs avec logo selon le niveau de zoom
+    map.on('zoom', () => {
+      const size = logoMarkerSize(map.getZoom())
+      Object.values(logoElsRef.current).forEach(el => {
+        el.style.width = `${size}px`
+        el.style.height = `${size}px`
+      })
+    })
+
     mapRef.current = map
   }
 
@@ -346,6 +356,15 @@ export default function MapScreen({ onBack }) {
     })
   }
 
+  // Calcule la taille du marqueur logo selon le niveau de zoom (plus gros quand on dézoome)
+  function logoMarkerSize(zoom) {
+    const minZoom = 9, maxZoom = 16
+    const minSize = 34, maxSize = 54
+    const z = Math.max(minZoom, Math.min(maxZoom, zoom))
+    const t = (maxZoom - z) / (maxZoom - minZoom)
+    return Math.round(minSize + t * (maxSize - minSize))
+  }
+
   function updateLocationMarkers(locations) {
     if (!mapRef.current || !window.mapboxgl) return
     const map = mapRef.current
@@ -353,23 +372,29 @@ export default function MapScreen({ onBack }) {
     Object.entries(markersRef.current).forEach(([key, marker]) => {
       if (key.startsWith('loc-')) marker.remove()
     })
+    logoElsRef.current = {}
 
     locations.forEach(loc => {
+      const hasLogo = !!loc.logo_url
+      const size = hasLogo ? logoMarkerSize(map.getZoom()) : 34
+
       const el = document.createElement('div')
       el.style.cssText = `
-        width: 34px; height: 34px; border-radius: 50%;
+        width: ${size}px; height: ${size}px; border-radius: 50%;
         background: ${loc.color ?? '#b96eff'};
         display: flex; align-items: center; justify-content: center;
         font-size: 16px; cursor: pointer;
         box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-        border: 2px solid rgba(255,255,255,0.3);
+        ${hasLogo ? '' : 'border: 2px solid rgba(255,255,255,0.3);'}
         overflow: hidden;
+        transition: width 0.15s ease, height 0.15s ease;
       `
-      if (loc.logo_url) {
+      if (hasLogo) {
         const img = document.createElement('img')
         img.src = loc.logo_url
         img.style.cssText = 'width: 100%; height: 100%; object-fit: cover; border-radius: 50%;'
         el.appendChild(img)
+        logoElsRef.current[loc.id] = el
       } else {
         el.textContent = loc.icon ?? '📍'
       }
