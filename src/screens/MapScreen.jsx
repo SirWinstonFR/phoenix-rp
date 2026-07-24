@@ -108,15 +108,14 @@ export default function MapScreen({ onBack }) {
     map.on('load', () => {
       setLoading(false)
 
-      // Masquer tous les points d'intérêt (commerces, hôtels, restaurants...)
+      // Masquer les points d'intérêt, transports et numéros de rue
       const styleLayers = map.getStyle().layers
       styleLayers.forEach(layer => {
-        if (
-          layer.id.includes('poi') ||
-          layer.id.includes('place-') ||
-          layer.id.includes('airport') ||
-          (layer.type === 'symbol' && layer.id !== 'neighborhood-label' && layer['source-layer'] === 'poi_label')
-        ) {
+        const id = layer.id.toLowerCase()
+        const isPOI = id.includes('poi') || id.includes('place-') || id.includes('airport')
+        const isTransit = id.includes('transit') || id.includes('bus') || id.includes('bicycle') || id.includes('bike') || id.includes('cycle')
+        const isHouseNumber = id.includes('housenum') || id.includes('house-num') || id.includes('address')
+        if (isPOI || isTransit || isHouseNumber) {
           map.setLayoutProperty(layer.id, 'visibility', 'none')
         }
       })
