@@ -5,7 +5,6 @@ import HomeScreen from './screens/HomeScreen'
 import InstaGrimScreen from './screens/InstaGrimScreen'
 import MapScreen from './screens/MapScreen'
 import DesktopMode from './desktop/DesktopMode'
-import LandingPage from './pages/LandingPage'
 import CharacterSelector from './screens/CharacterSelector'
 
 import CrushScreen from './screens/CrushScreen'
@@ -72,10 +71,6 @@ function getFrameVars(frameStyle) {
 export default function App() {
   const { user, loading, profile, activeId } = useAuth()
   const [currentScreen, setCurrentScreen] = useState('home')
-  const [showLanding, setShowLanding] = useState(() => {
-    // Ne montrer la vitrine que si le joueur n'a jamais cliqué "Entrer"
-    return sessionStorage.getItem('rp_entered') !== 'true'
-  })
   const [mode, setMode] = useState(() => {
     return localStorage.getItem('rp_mode') ?? 'phone'
   })
@@ -84,11 +79,6 @@ export default function App() {
   useEffect(() => {
     localStorage.removeItem('rp_mode')
   }, [])
-
-  function enterApp() {
-    sessionStorage.setItem('rp_entered', 'true')
-    setShowLanding(false)
-  }
 
   function handleTouchStart(e) {
     touchStartY.current = e.touches[0].clientY
@@ -113,11 +103,6 @@ export default function App() {
         <p style={{ color: '#333', fontSize: 12, fontFamily: 'Inter, sans-serif' }}>Chargement…</p>
       </div>
     )
-  }
-
-  // Vitrine publique — sautée automatiquement si déjà connecté
-  if (showLanding && !user) {
-    return <LandingPage onEnter={enterApp} />
   }
 
   if (!user) return <PhoneLoginScreen />
