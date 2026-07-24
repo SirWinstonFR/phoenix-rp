@@ -20,7 +20,7 @@ const ALL_APPS = [
 const STORAGE_KEY = 'rp_app_order'
 
 export default function HomeScreen({ onOpenApp, onSwitchToDesktop, phoneTheme }) {
-  const { profile, signOut } = useAuth()
+  const { profile, signOut, characters, switchCharacter } = useAuth()
   const unlockedApps = profile?.unlocked_apps ?? ['messages', 'phone', 'instagrim', 'map', 'crush', 'id', 'store', 'bank']
 
   const today = new Date()
@@ -146,6 +146,13 @@ export default function HomeScreen({ onOpenApp, onSwitchToDesktop, phoneTheme })
               <p style={{ fontSize: 11, color: 'var(--t3)' }}>📍 {profile.location}</p>
             )}
           </div>
+          {characters.length > 1 && (
+            <button onClick={switchCharacter} style={{
+              background: 'rgba(123,159,255,0.1)', border: '1px solid rgba(123,159,255,0.2)',
+              borderRadius: 10, padding: '6px 10px', fontSize: 11, fontWeight: 700,
+              color: '#7b9fff', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
+            }}>👥</button>
+          )}
           {onSwitchToDesktop && (
             <button onClick={onSwitchToDesktop} style={{
               background: 'rgba(185,110,255,0.1)', border: '1px solid rgba(185,110,255,0.2)',
