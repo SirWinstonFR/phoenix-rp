@@ -70,7 +70,7 @@ export default function BankScreen({ onBack, onOpenApp }) {
     const { data } = await supabase
       .from('money_requests')
       .select('*')
-      .eq('to_user_id', user.id)
+      .eq('to_user_id', profile.id)
       .eq('status', 'pending')
       .order('created_at', { ascending: false })
 
@@ -86,10 +86,10 @@ export default function BankScreen({ onBack, onOpenApp }) {
   }
 
   async function fetchSavings() {
-    const { data } = await supabase.from('savings').select('balance').eq('user_id', user.id).maybeSingle()
+    const { data } = await supabase.from('savings').select('balance').eq('user_id', profile.id).maybeSingle()
     if (data) setSavings(data.balance)
     else {
-      await supabase.from('savings').insert({ user_id: user.id, balance: 0 })
+      await supabase.from('savings').insert({ user_id: profile.id, balance: 0 })
       setSavings(0)
     }
   }
@@ -98,7 +98,7 @@ export default function BankScreen({ onBack, onOpenApp }) {
     const { data } = await supabase
       .from('transactions')
       .select('*')
-      .or(`from_user_id.eq.${user.id},to_user_id.eq.${user.id}`)
+      .or(`from_user_id.eq.${profile.id},to_user_id.eq.${profile.id}`)
       .order('created_at', { ascending: false })
       .limit(50)
 
@@ -128,7 +128,7 @@ export default function BankScreen({ onBack, onOpenApp }) {
       .from('profiles')
       .select('id, username, initials, avatar_color, avatar_url')
       .ilike('username', `%${query.trim()}%`)
-      .neq('id', user.id)
+      .neq('id', profile.id)
       .limit(10)
     setSearchResults(data ?? [])
   }
@@ -145,7 +145,7 @@ export default function BankScreen({ onBack, onOpenApp }) {
       const { data: recipProfile } = await supabase.from('profiles').select('balance').eq('id', recipient.id).single()
       await supabase.from('profiles').update({ balance: (recipProfile?.balance ?? 0) + amt }).eq('id', recipient.id)
       await supabase.from('transactions').insert({
-        from_user_id: user.id, to_user_id: recipient.id, amount: amt, type: 'transfer', note: note.trim(),
+        from_user_id: profile.id, to_user_id: recipient.id, amount: amt, type: 'transfer', note: note.trim(),
       })
       setToast(`✅ $${amt.toLocaleString()} envoyés à ${recipient.username}`)
       setTimeout(() => setToast(null), 3000)
@@ -165,7 +165,7 @@ export default function BankScreen({ onBack, onOpenApp }) {
       .from('profiles')
       .select('id, username, initials, avatar_color, avatar_url')
       .ilike('username', `%${query.trim()}%`)
-      .neq('id', user.id)
+      .neq('id', profile.id)
       .limit(10)
     setReqResults(data ?? [])
   }
@@ -175,7 +175,7 @@ export default function BankScreen({ onBack, onOpenApp }) {
     if (!reqTarget || !amt || amt <= 0) return
     setReqSending(true)
     await supabase.from('money_requests').insert({
-      from_user_id: user.id,
+      from_user_id: profile.id,
       to_user_id:   reqTarget.id,
       amount:       amt,
       note:         reqNote.trim(),
@@ -197,7 +197,7 @@ export default function BankScreen({ onBack, onOpenApp }) {
     const { data: recipProfile } = await supabase.from('profiles').select('balance').eq('id', request.from_user_id).single()
     await supabase.from('profiles').update({ balance: (recipProfile?.balance ?? 0) + request.amount }).eq('id', request.from_user_id)
     await supabase.from('transactions').insert({
-      from_user_id: user.id, to_user_id: request.from_user_id,
+      from_user_id: profile.id, to_user_id: request.from_user_id,
       amount: request.amount, type: 'transfer',
       note: request.note || 'Paiement de demande',
     })
@@ -259,13 +259,13 @@ export default function BankScreen({ onBack, onOpenApp }) {
     if (savingsMode === 'deposit') {
       if (amt > balance) { setToast('❌ Solde insuffisant'); setTimeout(() => setToast(null), 2500); setSavingsLoading(false); return }
       await updateProfile({ balance: balance - amt })
-      await supabase.from('savings').update({ balance: savings + amt }).eq('user_id', user.id)
+      await supabase.from('savings').update({ balance: savings + amt }).eq('user_id', profile.id)
       setSavings(prev => prev + amt)
       setToast(`💰 $${amt.toLocaleString()} déposés en épargne`)
     } else {
       if (amt > savings) { setToast('❌ Épargne insuffisante'); setTimeout(() => setToast(null), 2500); setSavingsLoading(false); return }
       await updateProfile({ balance: balance + amt })
-      await supabase.from('savings').update({ balance: savings - amt }).eq('user_id', user.id)
+      await supabase.from('savings').update({ balance: savings - amt }).eq('user_id', profile.id)
       setSavings(prev => prev - amt)
       setToast(`✅ $${amt.toLocaleString()} retirés de l'épargne`)
     }
@@ -410,7 +410,7 @@ export default function BankScreen({ onBack, onOpenApp }) {
 
   // ── VUE DÉTAIL TRANSACTION ──
   if (selectedTx) {
-    const isSender = selectedTx.from_user_id === user.id
+    const isSender = selectedTx.from_user_id === profile.id
     const other = isSender ? selectedTx.toProfile : selectedTx.fromProfile
     const isCredit = !isSender
 
@@ -552,7 +552,7 @@ export default function BankScreen({ onBack, onOpenApp }) {
 
   // ── VUE RECEVOIR (QR CODE) ──
   if (view === 'receive') {
-    const idShort = user.id.slice(0, 8).toUpperCase()
+    const idShort = profile.id.slice(0, 8).toUpperCase()
     return (
       <div className="phone">
         <StatusBar />
@@ -579,7 +579,7 @@ export default function BankScreen({ onBack, onOpenApp }) {
             }}>
               {Array.from({ length: 144 }).map((_, i) => {
                 // Motif pseudo-aléatoire mais stable basé sur l'user id
-                const seed = (user.id.charCodeAt(i % user.id.length) + i * 7) % 3
+                const seed = (profile.id.charCodeAt(i % profile.id.length) + i * 7) % 3
                 const isCorner = (i < 3 || i > 141 || i % 12 < 3 || i % 12 > 8) && (i < 39 || i > 105)
                 return (
                   <div key={i} style={{
@@ -596,7 +596,7 @@ export default function BankScreen({ onBack, onOpenApp }) {
             }}>
               <p style={{ fontSize: 13, fontFamily: 'monospace', color: 'var(--t2)', letterSpacing: 1 }}>{idShort}</p>
               <button
-                onClick={() => { navigator.clipboard?.writeText(user.id); setToast('📋 ID copié !'); setTimeout(() => setToast(null), 2000) }}
+                onClick={() => { navigator.clipboard?.writeText(profile.id); setToast('📋 ID copié !'); setTimeout(() => setToast(null), 2000) }}
                 style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 14, cursor: 'pointer' }}
               >📋</button>
             </div>
@@ -944,7 +944,7 @@ export default function BankScreen({ onBack, onOpenApp }) {
 
           {/* Sparkline évolution */}
           <div style={{ padding: '0 20px 20px' }}>
-            <Sparkline transactions={transactions} currentBalance={balance} userId={user.id} />
+            <Sparkline transactions={transactions} currentBalance={balance} userId={profile.id} />
           </div>
 
           {/* ACTIONS — design premium */}
@@ -1035,7 +1035,7 @@ export default function BankScreen({ onBack, onOpenApp }) {
             ) : (() => {
               const filteredTx = transactions.filter(t => {
                 if (historyFilter === 'all') return true
-                const isSender = t.from_user_id === user.id
+                const isSender = t.from_user_id === profile.id
                 return historyFilter === 'sent' ? isSender : !isSender
               })
               if (filteredTx.length === 0) return (
@@ -1046,7 +1046,7 @@ export default function BankScreen({ onBack, onOpenApp }) {
               return (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   {filteredTx.map(t => {
-                    const isSender = t.from_user_id === user.id
+                    const isSender = t.from_user_id === profile.id
                     const other = isSender ? t.toProfile : t.fromProfile
                     const isCredit = !isSender
 

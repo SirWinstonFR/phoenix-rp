@@ -50,13 +50,13 @@ export default function CrushScreen({ onBack }) {
     const { data: allProfiles } = await supabase
       .from('profiles')
       .select('*')
-      .neq('id', user.id)
+      .neq('id', profile.id)
 
     // Récupérer les profils déjà swipés
     const { data: alreadySwiped } = await supabase
       .from('crush_likes')
       .select('to_user_id')
-      .eq('from_user_id', user.id)
+      .eq('from_user_id', profile.id)
 
     const swipedIds = new Set(alreadySwiped?.map(l => l.to_user_id) ?? [])
     const filtered = (allProfiles ?? []).filter(p => !swipedIds.has(p.id))
@@ -70,13 +70,13 @@ export default function CrushScreen({ onBack }) {
     const { data } = await supabase
       .from('crush_matches')
       .select('*, user1:user1_id(id,username,initials,avatar_color,avatar_url,bio,location), user2:user2_id(id,username,initials,avatar_color,avatar_url,bio,location)')
-      .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
+      .or(`user1_id.eq.${profile.id},user2_id.eq.${profile.id}`)
       .order('created_at', { ascending: false })
 
     // Formater pour afficher l'autre joueur
     const formatted = (data ?? []).map(m => ({
       ...m,
-      otherProfile: m.user1_id === user.id ? m.user2 : m.user1,
+      otherProfile: m.user1_id === profile.id ? m.user2 : m.user1,
     }))
 
     setMatches(formatted)
@@ -89,7 +89,7 @@ export default function CrushScreen({ onBack }) {
         .select('*', { count: 'exact', head: true })
         .eq('match_id', m.id)
         .eq('read', false)
-        .neq('sender_id', user.id)
+        .neq('sender_id', profile.id)
       unread += count ?? 0
     }
     setUnreadMatches(unread)
@@ -108,7 +108,7 @@ export default function CrushScreen({ onBack }) {
       .update({ read: true })
       .eq('match_id', matchId)
       .eq('read', false)
-      .neq('sender_id', user.id)
+      .neq('sender_id', profile.id)
   }
 
   async function swipe(liked) {
@@ -122,7 +122,7 @@ export default function CrushScreen({ onBack }) {
 
     // Enregistrer le like/pass
     await supabase.from('crush_likes').insert({
-      from_user_id: user.id,
+      from_user_id: profile.id,
       to_user_id:   card.id,
       liked,
     })
@@ -133,14 +133,14 @@ export default function CrushScreen({ onBack }) {
         .from('crush_likes')
         .select('id')
         .eq('from_user_id', card.id)
-        .eq('to_user_id', user.id)
+        .eq('to_user_id', profile.id)
         .eq('liked', true)
         .maybeSingle()
 
       if (mutual) {
         // C'est un match !
-        const u1 = user.id < card.id ? user.id : card.id
-        const u2 = user.id < card.id ? card.id : user.id
+        const u1 = profile.id < card.id ? profile.id : card.id
+        const u2 = profile.id < card.id ? card.id : profile.id
         await supabase.from('crush_matches').insert({ user1_id: u1, user2_id: u2 })
         setShowMatch(card)
         fetchMatches()
@@ -156,7 +156,7 @@ export default function CrushScreen({ onBack }) {
     setMsgInput('')
     await supabase.from('crush_messages').insert({
       match_id:  activeMatch.id,
-      sender_id: user.id,
+      sender_id: profile.id,
       content,
     })
     fetchMessages(activeMatch.id)
@@ -217,7 +217,7 @@ export default function CrushScreen({ onBack }) {
               </div>
             )}
             {messages.map(msg => {
-              const isMe = msg.sender_id === user.id
+              const isMe = msg.sender_id === profile.id
               return (
                 <div key={msg.id} style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start' }}>
                   {!isMe && <Avatar profile={activeMatch.otherProfile} size={24} style={{ marginRight: 6, alignSelf: 'flex-end', flexShrink: 0 }} />}

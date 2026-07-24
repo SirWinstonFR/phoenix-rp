@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import StatusBar from '../components/StatusBar'
 
 export default function NewStoryScreen({ onBack }) {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const [imageFile, setImageFile] = useState(null)
   const [preview, setPreview]     = useState(null)
   const [loading, setLoading]     = useState(false)
@@ -32,7 +32,7 @@ export default function NewStoryScreen({ onBack }) {
 
       const { data: urlData } = supabase.storage.from('post-images').getPublicUrl(path)
       const { error: insertError } = await supabase.from('stories').insert({
-        user_id:   user.id,
+        user_id:   profile.id,
         image_url: urlData.publicUrl,
       })
       if (insertError) throw insertError

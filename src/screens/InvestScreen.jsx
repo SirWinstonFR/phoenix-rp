@@ -46,7 +46,7 @@ export default function InvestScreen({ onBack }) {
   }
 
   async function fetchMyInvests() {
-    const { data } = await supabase.from('investments').select('*').eq('user_id', user.id).gt('shares', 0)
+    const { data } = await supabase.from('investments').select('*').eq('user_id', profile.id).gt('shares', 0)
     setMyInvests(data ?? [])
   }
 
@@ -80,7 +80,7 @@ export default function InvestScreen({ onBack }) {
           const newAvg = Math.round(((existing.avg_buy_price * existing.shares) + cost) / newTotal)
           await supabase.from('investments').update({ shares: newTotal, avg_buy_price: newAvg, updated_at: new Date().toISOString() }).eq('id', existing.id)
         } else {
-          await supabase.from('investments').insert({ user_id: user.id, company_id: selected.id, shares: qty, avg_buy_price: selected.share_price })
+          await supabase.from('investments').insert({ user_id: profile.id, company_id: selected.id, shares: qty, avg_buy_price: selected.share_price })
         }
         setToast(`✅ ${qty} parts de ${selected.name} achetées`)
       } else {
