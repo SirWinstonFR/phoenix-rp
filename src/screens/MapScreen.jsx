@@ -108,6 +108,19 @@ export default function MapScreen({ onBack }) {
     map.on('load', () => {
       setLoading(false)
 
+      // Masquer tous les points d'intérêt (commerces, hôtels, restaurants...)
+      const styleLayers = map.getStyle().layers
+      styleLayers.forEach(layer => {
+        if (
+          layer.id.includes('poi') ||
+          layer.id.includes('place-') ||
+          layer.id.includes('airport') ||
+          (layer.type === 'symbol' && layer.id !== 'neighborhood-label' && layer['source-layer'] === 'poi_label')
+        ) {
+          map.setLayoutProperty(layer.id, 'visibility', 'none')
+        }
+      })
+
       // Bâtiments en 3D
       const layers = map.getStyle().layers
       const labelLayerId = layers.find(l => l.type === 'symbol' && l.layout['text-field'])?.id
