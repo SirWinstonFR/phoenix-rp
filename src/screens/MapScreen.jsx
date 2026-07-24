@@ -314,12 +314,12 @@ export default function MapScreen({ onBack }) {
       el.style.cssText = `
         width: 36px; height: 36px; border-radius: 50%;
         background: ${p.avatar_color ?? '#555'};
-        border: 3px solid ${p.id === user?.id ? '#b96eff' : '#fff'};
+        border: 3px solid ${p.id === profile?.id ? '#b96eff' : '#fff'};
         display: flex; align-items: center; justify-content: center;
         font-size: 13px; font-weight: 700; color: white;
         cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.5);
         overflow: hidden;
-        ${p.id === user?.id ? 'box-shadow: 0 0 0 2px #b96eff, 0 2px 12px rgba(185,110,255,0.5);' : ''}
+        ${p.id === profile?.id ? 'box-shadow: 0 0 0 2px #b96eff, 0 2px 12px rgba(185,110,255,0.5);' : ''}
       `
 
       if (p.avatar_url) {
@@ -336,7 +336,7 @@ export default function MapScreen({ onBack }) {
         padding: 2px 6px; border-radius: 6px; white-space: nowrap;
         font-family: Inter, sans-serif;
       `
-      label.textContent = p.id === user?.id ? 'Toi' : p.username
+      label.textContent = p.id === profile?.id ? 'Toi' : p.username
 
       const wrapper = document.createElement('div')
       wrapper.style.cssText = 'position: relative; display: flex; flex-direction: column; align-items: center;'
@@ -530,7 +530,7 @@ export default function MapScreen({ onBack }) {
     const authorName = newReview.type === 'pnj' ? newReview.author_name : (profile?.username ?? 'Joueur')
     await supabase.from('location_reviews').insert({
       location_id:  selectedLocation.id,
-      user_id:      user.id,
+      user_id:      profile.id,
       author_name:  authorName,
       content:      newReview.content.trim(),
       type:         newReview.type,
@@ -990,7 +990,7 @@ export default function MapScreen({ onBack }) {
             </div>
             <div style={{ flex: 1 }}>
               <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--t1)' }}>
-                {infoPopup.data.id === user?.id ? 'Toi' : infoPopup.data.username}
+                {infoPopup.data.id === profile?.id ? 'Toi' : infoPopup.data.username}
               </p>
               <p style={{ fontSize: 11, color: 'var(--t3)' }}>Joueur actif</p>
             </div>
@@ -1165,8 +1165,8 @@ export default function MapScreen({ onBack }) {
                             background: p.avatar_color ?? '#555',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             fontSize: 13, fontWeight: 700, color: '#fff', overflow: 'hidden',
-                            border: p.id === user?.id ? '2.5px solid #b96eff' : '2px solid rgba(255,255,255,0.1)',
-                            boxShadow: p.id === user?.id ? '0 0 12px rgba(185,110,255,0.5)' : '0 2px 8px rgba(0,0,0,0.4)',
+                            border: p.id === profile?.id ? '2.5px solid #b96eff' : '2px solid rgba(255,255,255,0.1)',
+                            boxShadow: p.id === profile?.id ? '0 0 12px rgba(185,110,255,0.5)' : '0 2px 8px rgba(0,0,0,0.4)',
                             cursor: 'default', transition: 'transform 0.15s',
                           }}
                         >
@@ -1181,7 +1181,7 @@ export default function MapScreen({ onBack }) {
                             border: '1px solid rgba(255,255,255,0.1)',
                             pointerEvents: 'none',
                           }}>
-                            {p.id === user?.id ? '👤 Toi' : p.username}
+                            {p.id === profile?.id ? '👤 Toi' : p.username}
                           </div>
                         )}
                       </div>
@@ -1245,7 +1245,7 @@ export default function MapScreen({ onBack }) {
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                             <span style={{ fontSize: 10 }}>{'⭐'.repeat(r.rating)}</span>
-                            {(r.user_id === user?.id || isMJ) && (
+                            {(r.user_id === profile?.id || isMJ) && (
                               <button onClick={() => deleteReview(r.id)} style={{ background: 'none', border: 'none', color: 'rgba(239,68,68,0.5)', fontSize: 12, cursor: 'pointer', padding: 0 }}>🗑️</button>
                             )}
                           </div>
