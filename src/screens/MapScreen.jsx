@@ -548,8 +548,16 @@ export default function MapScreen({ onBack }) {
   }
 
   function shareLocation() {
-    const text = `📍 ${selectedLocation.name} — Phoenix RP`
-    navigator.clipboard?.writeText(text)
+    const { discord_channel_id, discord_guild_id, name } = selectedLocation
+
+    if (discord_channel_id && discord_guild_id) {
+      // Ouvre directement le salon Discord
+      window.open(`https://discord.com/channels/${discord_guild_id}/${discord_channel_id}`, '_blank')
+      return
+    }
+
+    // Repli : pas de salon lié, on copie juste le nom
+    navigator.clipboard?.writeText(`📍 ${name} — Phoenix RP`)
     setShareToast(true)
     setTimeout(() => setShareToast(false), 2000)
   }
@@ -1101,7 +1109,9 @@ export default function MapScreen({ onBack }) {
                     color: '#7b9fff', fontSize: 12, fontWeight: 700,
                     cursor: 'pointer', fontFamily: 'inherit',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                  }}>🔗 Partager</button>
+                  }}>
+                    {selectedLocation.discord_channel_id ? '💬 Ouvrir le salon' : '🔗 Partager'}
+                  </button>
                   <button onClick={() => setShowAddReview(!showAddReview)} style={{
                     flex: 1, padding: '10px 0', borderRadius: 12,
                     background: 'rgba(185,110,255,0.1)', border: '1px solid rgba(185,110,255,0.2)',
