@@ -381,7 +381,7 @@ export default function MapScreen({ onBack }) {
       const el = document.createElement('div')
       el.style.cssText = `
         width: ${size}px; height: ${size}px; border-radius: 50%;
-        background: ${loc.color ?? '#b96eff'};
+        ${hasLogo ? '' : `background: ${loc.color ?? '#b96eff'};`}
         display: flex; align-items: center; justify-content: center;
         font-size: 16px; cursor: pointer;
         box-shadow: 0 2px 8px rgba(0,0,0,0.4);
