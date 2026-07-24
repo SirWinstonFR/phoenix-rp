@@ -112,13 +112,15 @@ export default function MapScreen({ onBack }) {
       const styleLayers = map.getStyle().layers
       styleLayers.forEach(layer => {
         const id = layer.id.toLowerCase()
-        const isPOI = id.includes('poi') || id.includes('place-') || id.includes('airport')
+        const sourceLayer = (layer['source-layer'] || '').toLowerCase()
+        const isPOI = id.includes('poi') || id.includes('place-') || id.includes('airport') || sourceLayer === 'poi_label'
         const isTransit = id.includes('transit') || id.includes('bus') || id.includes('bicycle') || id.includes('bike') || id.includes('cycle')
-        const isHouseNumber = id.includes('housenum') || id.includes('house-num') || id.includes('address')
+        const isHouseNumber = id.includes('housenum') || id.includes('house-num') || id.includes('address') || sourceLayer === 'housenum_label'
         if (isPOI || isTransit || isHouseNumber) {
           map.setLayoutProperty(layer.id, 'visibility', 'none')
         }
       })
+      console.log('Couches carte:', styleLayers.map(l => `${l.id} (${l['source-layer'] ?? '-'})`))
 
       // Bâtiments en 3D
       const layers = map.getStyle().layers
