@@ -44,6 +44,8 @@ const FILTERS = [
   { id: 'bar',         label: 'Bar' },
   { id: 'gouvernance', label: 'Gouvernance' },
 ]
+
+export default function MapScreen({ onBack }) {
   const { profile, user, updateProfile } = useAuth()
   const mapContainer = useRef(null)
   const mapRef       = useRef(null)
