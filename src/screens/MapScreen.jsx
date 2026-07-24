@@ -363,8 +363,16 @@ export default function MapScreen({ onBack }) {
         font-size: 16px; cursor: pointer;
         box-shadow: 0 2px 8px rgba(0,0,0,0.4);
         border: 2px solid rgba(255,255,255,0.3);
+        overflow: hidden;
       `
-      el.textContent = loc.icon ?? '📍'
+      if (loc.logo_url) {
+        const img = document.createElement('img')
+        img.src = loc.logo_url
+        img.style.cssText = 'width: 100%; height: 100%; object-fit: cover; border-radius: 50%;'
+        el.appendChild(img)
+      } else {
+        el.textContent = loc.icon ?? '📍'
+      }
 
       const label = document.createElement('div')
       label.style.cssText = `
@@ -1214,11 +1222,42 @@ export default function MapScreen({ onBack }) {
                 </div>
               )}
 
-              {/* Admin MJ */}
-              {isMJ && (
+              {/* Admin MJ / créateur */}
+              {(isMJ || selectedLocation.created_by === user.id) && (
                 <div style={{ padding: '14px 16px' }}>
-                  <p style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 10 }}>Admin MJ</p>
+                  <p style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 10 }}>Gestion du lieu</p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer', fontSize: 12, color: '#888' }}>
+                      🔖 {selectedLocation.logo_url ? 'Changer le logo' : 'Ajouter un logo'} (point de repère)
+                      <input type="file" accept="image/*" style={{ display: 'none' }}
+                        onChange={async e => {
+                          const file = e.target.files[0]
+                          if (!file) return
+                          const ext = file.name.split('.').pop()
+                          const path = `logos/${selectedLocation.id}.${ext}`
+                          const { error: upErr } = await supabase.storage.from('post-images').upload(path, file, { upsert: true })
+                          if (upErr) return
+                          const { data: urlData } = supabase.storage.from('post-images').getPublicUrl(path)
+                          const url = urlData.publicUrl + '?t=' + Date.now()
+                          await supabase.from('map_locations').update({ logo_url: url }).eq('id', selectedLocation.id)
+                          setSelectedLocation(prev => ({ ...prev, logo_url: url }))
+                          fetchLocations()
+                        }}
+                      />
+                    </label>
+                    {selectedLocation.logo_url && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px' }}>
+                        <img src={selectedLocation.logo_url} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.15)' }} />
+                        <button
+                          onClick={async () => {
+                            await supabase.from('map_locations').update({ logo_url: null }).eq('id', selectedLocation.id)
+                            setSelectedLocation(prev => ({ ...prev, logo_url: null }))
+                            fetchLocations()
+                          }}
+                          style={{ background: 'none', border: 'none', color: 'rgba(239,68,68,0.7)', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}
+                        >Retirer le logo</button>
+                      </div>
+                    )}
                     <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer', fontSize: 12, color: '#888' }}>
                       🖼️ {selectedLocation.cover_url ? 'Changer la couverture' : 'Ajouter une couverture'}
                       <input type="file" accept="image/*" style={{ display: 'none' }}
@@ -1237,9 +1276,11 @@ export default function MapScreen({ onBack }) {
                         }}
                       />
                     </label>
-                    <button onClick={() => { deleteLocation(selectedLocation.id); setSelectedLocation(null) }} style={{ padding: '10px 12px', borderRadius: 12, background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.12)', color: '#f87171', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8 }}>
-                      🗑️ Supprimer ce lieu
-                    </button>
+                    {isMJ && (
+                      <button onClick={() => { deleteLocation(selectedLocation.id); setSelectedLocation(null) }} style={{ padding: '10px 12px', borderRadius: 12, background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.12)', color: '#f87171', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8 }}>
+                        🗑️ Supprimer ce lieu
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
