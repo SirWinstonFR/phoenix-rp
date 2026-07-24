@@ -26,7 +26,24 @@ const NEIGHBORHOODS = [
   },
 ]
 
-export default function MapScreen({ onBack }) {
+// Catégories de lieux
+const CATEGORIES = [
+  { id: 'domicile',    label: 'Domicile',    icon: '🏠', color: '#4dd9ff' },
+  { id: 'travail',     label: 'Travail',     icon: '💼', color: '#f59e0b' },
+  { id: 'commerce',    label: 'Commerce',    icon: '🛍️', color: '#22c55e' },
+  { id: 'bar',         label: 'Bar',         icon: '🍺', color: '#c9963f' },
+  { id: 'gouvernance', label: 'Gouvernance', icon: '🏛️', color: '#7a1024' },
+  { id: 'autre',       label: 'Autre',       icon: '📍', color: '#b96eff' },
+]
+
+const FILTERS = [
+  { id: 'all',         label: 'Tout' },
+  { id: 'mine',        label: 'À moi' },
+  { id: 'travail',     label: 'Travail' },
+  { id: 'commerce',    label: 'Commerce' },
+  { id: 'bar',         label: 'Bar' },
+  { id: 'gouvernance', label: 'Gouvernance' },
+]
   const { profile, user, updateProfile } = useAuth()
   const mapContainer = useRef(null)
   const mapRef       = useRef(null)
@@ -36,7 +53,11 @@ export default function MapScreen({ onBack }) {
   const [locations, setLocations]     = useState([])
   const [showStylePicker, setShowStylePicker] = useState(false)
   const [showAddLocation, setShowAddLocation] = useState(false)
-  const [newLocation, setNewLocation] = useState({ name: '', description: '', icon: '📍', color: '#b96eff' })
+  const [newLocation, setNewLocation] = useState({ name: '', description: '', icon: '📍', color: '#b96eff', category: 'autre' })
+  const [ownerSearch, setOwnerSearch]   = useState('')
+  const [ownerResults, setOwnerResults] = useState([])
+  const [newOwner, setNewOwner]         = useState(null)
+  const [locationFilter, setLocationFilter] = useState('all')
   const [pendingCoords, setPendingCoords] = useState(null)
   const [loading, setLoading]         = useState(true)
   const [infoPopup, setInfoPopup]               = useState(null)
@@ -238,9 +259,33 @@ export default function MapScreen({ onBack }) {
     const placed   = (data ?? []).filter(l => l.lat !== null && l.lng !== null)
     const unplaced = (data ?? []).filter(l => l.lat === null || l.lng === null)
 
-    setLocations(placed)
+    // Récupérer les profils propriétaires
+    const ownerIds = [...new Set(placed.filter(l => l.owner_id).map(l => l.owner_id))]
+    let ownersMap = {}
+    if (ownerIds.length > 0) {
+      const { data: owners } = await supabase
+        .from('profiles')
+        .select('id, username, initials, avatar_color, avatar_url')
+        .in('id', ownerIds)
+      owners?.forEach(o => { ownersMap[o.id] = o })
+    }
+
+    const enriched = placed.map(l => ({ ...l, ownerProfile: l.owner_id ? ownersMap[l.owner_id] : null }))
+
+    setLocations(enriched)
     setUnplacedLocs(unplaced)
-    updateLocationMarkers(placed)
+    updateLocationMarkers(applyFilter(enriched, locationFilter))
+  }
+
+  function applyFilter(locs, filter) {
+    if (filter === 'all') return locs
+    if (filter === 'mine') return locs.filter(l => l.owner_id === user.id)
+    return locs.filter(l => l.category === filter)
+  }
+
+  function changeFilter(filter) {
+    setLocationFilter(filter)
+    updateLocationMarkers(applyFilter(locations, filter))
   }
 
   function updatePlayerMarkers(players) {
@@ -360,13 +405,35 @@ export default function MapScreen({ onBack }) {
       description: newLocation.description.trim(),
       icon:        newLocation.icon,
       color:       newLocation.color,
+      category:    newLocation.category,
+      owner_id:    newOwner?.id ?? null,
       lat:         pendingCoords.lat,
       lng:         pendingCoords.lng,
       created_by:  user.id,
     })
     setShowAddLocation(false)
-    setNewLocation({ name: '', description: '', icon: '📍', color: '#b96eff' })
+    setNewLocation({ name: '', description: '', icon: '📍', color: '#b96eff', category: 'autre' })
+    setNewOwner(null); setOwnerSearch(''); setOwnerResults([])
     setPendingCoords(null)
+    fetchLocations()
+  }
+
+  async function searchOwner(query) {
+    setOwnerSearch(query)
+    if (query.trim().length < 2) { setOwnerResults([]); return }
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, username, initials, avatar_color, avatar_url')
+      .ilike('username', `%${query.trim()}%`)
+      .limit(8)
+    setOwnerResults(data ?? [])
+  }
+
+  // Réassigner catégorie/propriétaire depuis la fiche lieu (MJ ou créateur)
+  async function updateLocationMeta(updates) {
+    if (!selectedLocation) return
+    await supabase.from('map_locations').update(updates).eq('id', selectedLocation.id)
+    setSelectedLocation(prev => ({ ...prev, ...updates }))
     fetchLocations()
   }
 
@@ -519,6 +586,31 @@ export default function MapScreen({ onBack }) {
             )}
             <button className="icon-btn" onClick={() => { setShowStylePicker(!showStylePicker); setShowAdmin(false) }}>🗺️</button>
           </div>
+        </div>
+
+        {/* Barre de filtres */}
+        <div style={{
+          display: 'flex', gap: 6, padding: '8px 12px',
+          overflowX: 'auto', scrollbarWidth: 'none',
+          borderBottom: '1px solid var(--border)',
+          flexShrink: 0, zIndex: 40, position: 'relative',
+          background: 'var(--bg)',
+        }}>
+          {FILTERS.map(f => (
+            <button
+              key={f.id}
+              onClick={() => changeFilter(f.id)}
+              style={{
+                padding: '6px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700,
+                cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', flexShrink: 0,
+                background: locationFilter === f.id ? 'var(--accent)' : 'var(--glass)',
+                color: locationFilter === f.id ? '#fff' : 'var(--t3)',
+                border: locationFilter === f.id ? 'none' : '1px solid var(--border)',
+              }}
+            >
+              {f.label}
+            </button>
+          ))}
         </div>
 
         {/* Panneau admin — visible MJ uniquement */}
@@ -750,6 +842,79 @@ export default function MapScreen({ onBack }) {
                   ))}
                 </div>
 
+                {/* Catégorie */}
+                <div>
+                  <span style={{ fontSize: 12, color: 'var(--t3)', marginBottom: 6, display: 'block' }}>Catégorie :</span>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {CATEGORIES.map(c => (
+                      <button
+                        key={c.id}
+                        onClick={() => setNewLocation(p => ({ ...p, category: c.id, icon: c.icon, color: c.color }))}
+                        style={{
+                          padding: '6px 10px', borderRadius: 10, fontSize: 11, fontWeight: 700,
+                          cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 4,
+                          background: newLocation.category === c.id ? `${c.color}33` : 'var(--bg3)',
+                          border: `1px solid ${newLocation.category === c.id ? c.color : 'var(--border2)'}`,
+                          color: newLocation.category === c.id ? c.color : 'var(--t2)',
+                        }}
+                      >
+                        {c.icon} {c.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Attribution propriétaire */}
+                <div>
+                  <span style={{ fontSize: 12, color: 'var(--t3)', marginBottom: 6, display: 'block' }}>
+                    Appartient à (optionnel) :
+                  </span>
+                  {newOwner ? (
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      background: 'var(--bg3)', border: '1px solid var(--border2)',
+                      borderRadius: 10, padding: '6px 10px',
+                    }}>
+                      <span style={{ fontSize: 13, color: 'var(--t1)', flex: 1, fontWeight: 600 }}>{newOwner.username}</span>
+                      <button onClick={() => setNewOwner(null)} style={{ background: 'none', border: 'none', color: 'var(--t3)', cursor: 'pointer', fontSize: 14 }}>✕</button>
+                    </div>
+                  ) : (
+                    <>
+                      <input
+                        placeholder="Rechercher un joueur…"
+                        value={ownerSearch}
+                        onChange={e => searchOwner(e.target.value)}
+                        style={{
+                          width: '100%', border: '1px solid var(--border2)', borderRadius: 10,
+                          padding: '8px 12px', background: 'var(--bg3)', color: 'var(--t1)',
+                          fontSize: 12, fontFamily: 'inherit', outline: 'none',
+                        }}
+                      />
+                      {ownerResults.length > 0 && (
+                        <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          {ownerResults.map(o => (
+                            <div
+                              key={o.id}
+                              onClick={() => { setNewOwner(o); setOwnerResults([]); setOwnerSearch('') }}
+                              style={{
+                                padding: '6px 10px', borderRadius: 8, cursor: 'pointer',
+                                background: 'var(--bg3)', fontSize: 12, color: 'var(--t1)',
+                              }}
+                            >{o.username}</div>
+                          ))}
+                        </div>
+                      )}
+                      <button
+                        onClick={() => setNewOwner({ id: user.id, username: profile?.username ?? 'Toi' })}
+                        style={{
+                          marginTop: 6, background: 'none', border: 'none',
+                          color: 'var(--accent)', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit',
+                        }}
+                      >+ C'est à moi</button>
+                    </>
+                  )}
+                </div>
+
                 <button className="btn-primary" onClick={addLocation} disabled={!newLocation.name.trim()}>
                   Ajouter le lieu
                 </button>
@@ -848,6 +1013,42 @@ export default function MapScreen({ onBack }) {
 
               {/* Infos + actions */}
               <div style={{ padding: '14px 16px 16px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+
+                {/* Catégorie + propriétaire */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+                  {(() => {
+                    const cat = CATEGORIES.find(c => c.id === selectedLocation.category) ?? CATEGORIES[5]
+                    return (
+                      <span style={{
+                        fontSize: 10, fontWeight: 700, padding: '4px 9px', borderRadius: 8,
+                        background: `${cat.color}22`, color: cat.color, border: `1px solid ${cat.color}44`,
+                      }}>{cat.icon} {cat.label}</span>
+                    )
+                  })()}
+                  {selectedLocation.ownerProfile && (
+                    <span style={{
+                      fontSize: 10, fontWeight: 700, padding: '4px 9px', borderRadius: 8,
+                      background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                    }}>
+                      👤 {selectedLocation.ownerProfile.id === user.id ? 'À toi' : selectedLocation.ownerProfile.username}
+                    </span>
+                  )}
+                  {(isMJ || selectedLocation.created_by === user.id) && (
+                    <button
+                      onClick={() => {
+                        const next = CATEGORIES[(CATEGORIES.findIndex(c => c.id === selectedLocation.category) + 1) % CATEGORIES.length]
+                        updateLocationMeta({ category: next.id })
+                      }}
+                      style={{
+                        fontSize: 10, fontWeight: 700, padding: '4px 9px', borderRadius: 8,
+                        background: 'none', border: '1px dashed rgba(255,255,255,0.2)',
+                        color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontFamily: 'inherit',
+                      }}
+                    >↻ Changer</button>
+                  )}
+                </div>
+
                 {selectedLocation.phone && (
                   <div style={{
                     display: 'flex', alignItems: 'center', gap: 10,
