@@ -9,6 +9,23 @@ const MAP_STYLE = 'mapbox://styles/mapbox/outdoors-v12'
 // Centre : Phoenix, Arizona
 const PHOENIX = { lat: 33.4484, lng: -112.0740 }
 
+// Quartiers de Phoenix (contours approximatifs basés sur les rues officielles qui les délimitent)
+const NEIGHBORHOODS = [
+  {
+    id: 'downtown',
+    name: 'Downtown Phoenix',
+    color: '#b96eff',
+    // Bornes : 7th Ave (ouest) · 7th St (est) · McDowell Rd (nord) · I-10 (sud)
+    coords: [
+      [-112.0839, 33.4696],
+      [-112.0629, 33.4696],
+      [-112.0629, 33.4409],
+      [-112.0839, 33.4409],
+      [-112.0839, 33.4696],
+    ],
+  },
+]
+
 export default function MapScreen({ onBack }) {
   const { profile, user, updateProfile } = useAuth()
   const mapContainer = useRef(null)
@@ -75,6 +92,8 @@ export default function MapScreen({ onBack }) {
       style: MAP_STYLE,
       center: [PHOENIX.lng, PHOENIX.lat],
       zoom: 11,
+      pitch: 45,
+      bearing: -10,
       attributionControl: false,
     })
 
@@ -88,6 +107,77 @@ export default function MapScreen({ onBack }) {
 
     map.on('load', () => {
       setLoading(false)
+
+      // Bâtiments en 3D
+      const layers = map.getStyle().layers
+      const labelLayerId = layers.find(l => l.type === 'symbol' && l.layout['text-field'])?.id
+
+      map.addLayer({
+        id: '3d-buildings',
+        source: 'composite',
+        'source-layer': 'building',
+        filter: ['==', 'extrude', 'true'],
+        type: 'fill-extrusion',
+        minzoom: 14,
+        paint: {
+          'fill-extrusion-color': '#3a2a3e',
+          'fill-extrusion-height': ['get', 'height'],
+          'fill-extrusion-base': ['get', 'min_height'],
+          'fill-extrusion-opacity': 0.85,
+        },
+      }, labelLayerId)
+
+      // Ajouter les quartiers en tant que zones colorées
+      map.addSource('neighborhoods', {
+        type: 'geojson',
+        data: {
+          type: 'FeatureCollection',
+          features: NEIGHBORHOODS.map(n => ({
+            type: 'Feature',
+            properties: { name: n.name, color: n.color },
+            geometry: { type: 'Polygon', coordinates: [n.coords] },
+          })),
+        },
+      })
+
+      map.addLayer({
+        id: 'neighborhood-fill',
+        type: 'fill',
+        source: 'neighborhoods',
+        paint: {
+          'fill-color': ['get', 'color'],
+          'fill-opacity': 0.12,
+        },
+      })
+
+      map.addLayer({
+        id: 'neighborhood-line',
+        type: 'line',
+        source: 'neighborhoods',
+        paint: {
+          'line-color': ['get', 'color'],
+          'line-width': 2,
+          'line-dasharray': [2, 1.5],
+        },
+      })
+
+      map.addLayer({
+        id: 'neighborhood-label',
+        type: 'symbol',
+        source: 'neighborhoods',
+        layout: {
+          'text-field': ['get', 'name'],
+          'text-size': 13,
+          'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+          'symbol-placement': 'point',
+        },
+        paint: {
+          'text-color': '#ffffff',
+          'text-halo-color': 'rgba(0,0,0,0.6)',
+          'text-halo-width': 1.5,
+        },
+      })
+
       // Réappliquer les marqueurs une fois la carte prête
       fetchPlayers()
       fetchLocations()
@@ -365,6 +455,12 @@ export default function MapScreen({ onBack }) {
     fetchLocations()
   }
 
+  function toggle3D() {
+    if (!mapRef.current) return
+    const current = mapRef.current.getPitch()
+    mapRef.current.easeTo({ pitch: current > 0 ? 0 : 45, duration: 500 })
+  }
+
   function centerOnMe() {
     if (!profile?.map_lat || !mapRef.current) return
     mapRef.current.flyTo({
@@ -517,6 +613,17 @@ export default function MapScreen({ onBack }) {
               🎯
             </button>
           )}
+
+          {/* Bascule vue 3D */}
+          <button onClick={toggle3D} style={{
+            width: 40, height: 40, borderRadius: 12,
+            background: 'var(--bg3)', border: '1px solid var(--border)',
+            color: 'var(--t1)', fontSize: 16, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+          }}>
+            🏙️
+          </button>
 
           {/* Ajouter un lieu */}
           <button onClick={() => { setShowAddLocation(true); setPendingCoords(null) }} style={{
