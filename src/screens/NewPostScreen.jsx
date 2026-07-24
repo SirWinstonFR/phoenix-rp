@@ -48,7 +48,7 @@ export default function NewPostScreen({ onBack }) {
       }
 
       const { error: insertError } = await supabase.from('posts').insert({
-        user_id:        user.id,
+        user_id:        profile.id,
         caption:        caption.trim(),
         image_url:      imageUrl,
         likes:          0,

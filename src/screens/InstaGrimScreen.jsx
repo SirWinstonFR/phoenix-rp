@@ -41,7 +41,7 @@ export default function InstaGrimScreen({ onBack }) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'stories' }, () => fetchStories())
       .on('postgres_changes', {
         event: 'INSERT', schema: 'public', table: 'notifications',
-        filter: `user_id=eq.${user.id}`
+        filter: `user_id=eq.${profile.id}`
       }, () => fetchUnreadNotifs())
       .subscribe()
 
@@ -52,7 +52,7 @@ export default function InstaGrimScreen({ onBack }) {
     const { count } = await supabase
       .from('notifications')
       .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id)
+      .eq('user_id', profile.id)
       .eq('read', false)
     setUnreadNotifs(count ?? 0)
   }
@@ -148,10 +148,10 @@ export default function InstaGrimScreen({ onBack }) {
     await supabase.from('posts').update({ likes: newLikes }).eq('id', postId)
 
     // Envoyer une notification si ce n'est pas son propre post
-    if (!isLiked && postOwnerId !== user.id) {
+    if (!isLiked && postOwnerId !== profile.id) {
       await supabase.from('notifications').insert({
         user_id:      postOwnerId,
-        from_user_id: user.id,
+        from_user_id: profile.id,
         type:         'like',
         post_id:      postId,
       })
@@ -162,13 +162,13 @@ export default function InstaGrimScreen({ onBack }) {
     const content = commentInputs[postId]?.trim()
     if (!content || !user) return
     setCommentInputs(prev => ({ ...prev, [postId]: '' }))
-    await supabase.from('comments').insert({ post_id: postId, user_id: user.id, content })
+    await supabase.from('comments').insert({ post_id: postId, user_id: profile.id, content })
 
     // Notification si ce n'est pas son propre post
-    if (postOwnerId !== user.id) {
+    if (postOwnerId !== profile.id) {
       await supabase.from('notifications').insert({
         user_id:      postOwnerId,
-        from_user_id: user.id,
+        from_user_id: profile.id,
         type:         'comment',
         post_id:      postId,
       })
@@ -247,7 +247,7 @@ export default function InstaGrimScreen({ onBack }) {
 
           {/* Stories des autres */}
           {stories.map((group, i) => {
-            const isMe = group.profile?.id === user.id
+            const isMe = group.profile?.id === profile.id
             return (
               <div
                 className="story-item" key={group.profile?.id ?? i}
@@ -316,7 +316,7 @@ export default function InstaGrimScreen({ onBack }) {
                         minWidth: 140, boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
                         animation: 'fadeDown 0.15s ease',
                       }}>
-                        {post.user_id === user.id && (
+                        {post.user_id === profile.id && (
                           <button
                             onClick={() => deletePost(post.id)}
                             style={{
@@ -405,7 +405,7 @@ export default function InstaGrimScreen({ onBack }) {
                             {c.profiles?.username ?? 'Joueur'}
                           </b>{' '}{c.content}
                         </p>
-                        {(c.user_id === user.id || post.user_id === user.id) && (
+                        {(c.user_id === profile.id || post.user_id === profile.id) && (
                           <div style={{ position: 'relative' }}>
                             <button
                               onClick={() => setCommentMenu(commentMenu === c.id ? null : c.id)}
