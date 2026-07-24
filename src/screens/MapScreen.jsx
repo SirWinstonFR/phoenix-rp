@@ -291,7 +291,7 @@ export default function MapScreen({ onBack }) {
 
   function applyFilter(locs, filter) {
     if (filter === 'all') return locs
-    if (filter === 'mine') return locs.filter(l => l.owner_id === user.id)
+    if (filter === 'mine') return locs.filter(l => l.owner_id === profile.id)
     return locs.filter(l => l.category === filter)
   }
 
@@ -948,7 +948,7 @@ export default function MapScreen({ onBack }) {
                         </div>
                       )}
                       <button
-                        onClick={() => setNewOwner({ id: user.id, username: profile?.username ?? 'Toi' })}
+                        onClick={() => setNewOwner({ id: profile.id, username: profile?.username ?? 'Toi' })}
                         style={{
                           marginTop: 6, background: 'none', border: 'none',
                           color: 'var(--accent)', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit',
@@ -1074,7 +1074,7 @@ export default function MapScreen({ onBack }) {
                       background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)',
                       border: '1px solid rgba(255,255,255,0.1)',
                     }}>
-                      👤 {selectedLocation.ownerProfile.id === user.id ? 'À toi' : selectedLocation.ownerProfile.username}
+                      👤 {selectedLocation.ownerProfile.id === profile.id ? 'À toi' : selectedLocation.ownerProfile.username}
                     </span>
                   )}
                   {(isMJ || selectedLocation.created_by === user.id) && (
