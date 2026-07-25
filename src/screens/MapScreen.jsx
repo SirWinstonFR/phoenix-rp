@@ -9,12 +9,13 @@ const MAP_STYLE = 'mapbox://styles/mapbox/outdoors-v12'
 // Centre : Phoenix, Arizona
 const PHOENIX = { lat: 33.4484, lng: -112.0740 }
 
-// Quartiers de Phoenix (contours approximatifs basés sur les rues officielles qui les délimitent)
+// 5 quartiers de Phoenix, chacun associé à une des 5 catégories RP
 const NEIGHBORHOODS = [
   {
     id: 'downtown',
     name: 'Downtown Phoenix',
-    color: '#b96eff',
+    category: 'gouvernance', // Mairie, tribunal du comté, administration
+    color: '#7a1024',
     // Bornes : 7th Ave (ouest) · 7th St (est) · McDowell Rd (nord) · I-10 (sud)
     coords: [
       [-112.0839, 33.4696],
@@ -25,55 +26,59 @@ const NEIGHBORHOODS = [
     ],
   },
   {
-    id: 'arcadia',
-    name: 'Arcadia',
-    color: '#22c55e',
-    // Bornes : 44th St (ouest) · 68th St (est) · Indian School Rd (sud) · Camelback Rd (nord)
-    coords: [
-      [-111.9780, 33.5093],
-      [-111.9400, 33.5093],
-      [-111.9400, 33.4948],
-      [-111.9780, 33.4948],
-      [-111.9780, 33.5093],
-    ],
-  },
-  {
-    id: 'melrose',
-    name: 'Melrose District',
-    color: '#ec4899',
-    // Bornes : 9th Ave (ouest) · 5th Ave (est) · Indian School Rd (sud) · Camelback Rd (nord)
-    coords: [
-      [-112.0890, 33.5093],
-      [-112.0810, 33.5093],
-      [-112.0810, 33.4948],
-      [-112.0890, 33.4948],
-      [-112.0890, 33.5093],
-    ],
-  },
-  {
-    id: 'ahwatukee',
-    name: 'Ahwatukee',
+    id: 'midtown',
+    name: 'Midtown Phoenix',
+    category: 'travail', // Corridor de bureaux le long de Central Ave
     color: '#f59e0b',
-    // Bornes approximatives : South Mountain (nord) · I-10 (sud) · 32nd St (est) · 51st Ave (ouest)
+    // Bornes : 3rd Ave (ouest) · 3rd St (est) · McDowell Rd (sud) · Camelback Rd (nord)
     coords: [
-      [-112.1000, 33.3650],
-      [-112.0300, 33.3650],
-      [-112.0300, 33.3090],
-      [-112.1000, 33.3090],
-      [-112.1000, 33.3650],
+      [-112.0780, 33.5093],
+      [-112.0700, 33.5093],
+      [-112.0700, 33.4696],
+      [-112.0780, 33.4696],
+      [-112.0780, 33.5093],
     ],
   },
   {
-    id: 'desert-ridge',
-    name: 'Desert Ridge',
-    color: '#4dd9ff',
-    // Bornes approximatives : Tatum Blvd (ouest) · 56th St (est) · Loop 101 (nord) · Union Hills Dr (sud)
+    id: 'roosevelt-row',
+    name: 'Roosevelt Row',
+    category: 'bar', // Quartier des arts, bars et vie nocturne
+    color: '#c9963f',
+    // Bornes : Central Ave (ouest) · 7th St (est) · McKinley St (sud) · McDowell Rd (nord)
     coords: [
-      [-111.9800, 33.6750],
-      [-111.9400, 33.6750],
-      [-111.9400, 33.6550],
-      [-111.9800, 33.6550],
-      [-111.9800, 33.6750],
+      [-112.0740, 33.4620],
+      [-112.0629, 33.4620],
+      [-112.0629, 33.4550],
+      [-112.0740, 33.4550],
+      [-112.0740, 33.4620],
+    ],
+  },
+  {
+    id: 'willo',
+    name: 'Willo Historic District',
+    category: 'domicile', // Quartier résidentiel historique
+    color: '#4dd9ff',
+    // Bornes : 7th Ave (ouest) · 3rd Ave (est) · McDowell Rd (sud) · Thomas Rd (nord)
+    coords: [
+      [-112.0839, 33.4790],
+      [-112.0730, 33.4790],
+      [-112.0730, 33.4696],
+      [-112.0839, 33.4696],
+      [-112.0839, 33.4790],
+    ],
+  },
+  {
+    id: 'biltmore',
+    name: 'Biltmore District',
+    category: 'commerce', // Centre commercial haut de gamme
+    color: '#22c55e',
+    // Bornes approximatives : 24th St (ouest) · 32nd St (est) · Camelback Rd (sud) · Highland Ave (nord)
+    coords: [
+      [-112.0300, 33.5120],
+      [-112.0100, 33.5120],
+      [-112.0100, 33.5050],
+      [-112.0300, 33.5050],
+      [-112.0300, 33.5120],
     ],
   },
 ]
@@ -833,17 +838,21 @@ export default function MapScreen({ onBack }) {
                 />
                 {showNeighborhoods && (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '4px 4px 0 30px' }}>
-                    {NEIGHBORHOODS.map(n => (
-                      <span key={n.id} style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 5,
-                        fontSize: 10, color: 'var(--t3)',
-                        background: 'var(--bg2)', border: '1px solid var(--border)',
-                        borderRadius: 8, padding: '3px 8px',
-                      }}>
-                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: n.color }} />
-                        {n.name}
-                      </span>
-                    ))}
+                    {NEIGHBORHOODS.map(n => {
+                      const cat = CATEGORIES.find(c => c.id === n.category)
+                      return (
+                        <span key={n.id} style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 5,
+                          fontSize: 10, color: 'var(--t3)',
+                          background: 'var(--bg2)', border: '1px solid var(--border)',
+                          borderRadius: 8, padding: '3px 8px',
+                        }}>
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: n.color, flexShrink: 0 }} />
+                          {n.name}
+                          {cat && <span style={{ fontSize: 9, opacity: 0.6 }}>{cat.icon}</span>}
+                        </span>
+                      )
+                    })}
                   </div>
                 )}
               </div>
