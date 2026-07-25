@@ -104,9 +104,20 @@ export default function HomeScreen({ onOpenApp, onSwitchToDesktop, phoneTheme })
     setDragOver(null)
   }
 
-  function handleClick(app, unlocked) {
+  function handleClick(app, unlocked, e) {
     if (editMode) return
-    if (unlocked) onOpenApp(app.id)
+    if (!unlocked) return
+
+    // Position de l'icône relative au téléphone → pour l'effet "grandit depuis l'icône"
+    const iconRect = e.currentTarget.getBoundingClientRect()
+    const phoneEl  = e.currentTarget.closest('.phone')
+    const phoneRect = phoneEl?.getBoundingClientRect()
+    const origin = phoneRect ? {
+      x: iconRect.left - phoneRect.left + iconRect.width / 2,
+      y: iconRect.top - phoneRect.top + iconRect.height / 2,
+    } : null
+
+    onOpenApp(app.id, origin)
   }
 
   function stopEdit(e) {
@@ -200,7 +211,7 @@ export default function HomeScreen({ onOpenApp, onSwitchToDesktop, phoneTheme })
                 onTouchStart={() => unlocked && startPress(app.id)}
                 onTouchEnd={endPress}
                 onTouchCancel={endPress}
-                onClick={() => handleClick(app, unlocked)}
+                onClick={e => handleClick(app, unlocked, e)}
                 style={{
                   animationDelay: `${i * 0.06}s`,
                   opacity: isDragging ? 0.35 : 1,

@@ -73,6 +73,7 @@ function getFrameVars(frameStyle) {
 export default function App() {
   const { user, loading, profile, activeId } = useAuth()
   const [currentScreen, setCurrentScreen] = useState('home')
+  const [appOrigin, setAppOrigin] = useState(null) // position de l'icône tapée, pour l'effet "grandit depuis l'icône"
   const [mode, setMode] = useState(() => {
     return localStorage.getItem('rp_mode') ?? 'phone'
   })
@@ -112,6 +113,7 @@ export default function App() {
       setDragY(DRAG_MAX + 40)
       setTimeout(() => {
         setCurrentScreen('home')
+        setAppOrigin(null)
         setDragY(0)
       }, 260)
     } else {
@@ -173,17 +175,38 @@ export default function App() {
       '--phone-shell':   phoneTheme?.shell ?? '#0c0c0c',
       '--phone-shell-2': phoneTheme?.shell ? phoneTheme.shell + '88' : 'rgba(255,255,255,0.05)',
       '--phone-border':  phoneTheme ? `${phoneTheme.color}33` : 'rgba(255,255,255,0.1)',
+      '--app-origin':    appOrigin ? `${appOrigin.x}px ${appOrigin.y}px` : '50% 100%',
       ...frameVars,
     }}>
-      <Screen
-        onOpenApp={appId => {
-          if (SCREENS[appId]) setCurrentScreen(appId)
-          else alert('Cette app arrive bientôt !')
-        }}
-        onBack={() => setCurrentScreen('home')}
-        onSwitchToDesktop={() => setMode('desktop')}
-        phoneTheme={phoneTheme}
-      />
+      {/* Aperçu de l'accueil qui se révèle en dessous pendant le geste de sortie */}
+      {dragY > 0 && currentScreen !== 'home' && (
+        <div style={{
+          position: 'absolute', inset: 0, zIndex: 1,
+          borderRadius: 'var(--phone-radius, 48px)', overflow: 'hidden',
+          transform: `scale(${0.92 + dragProgress * 0.08})`,
+          opacity: 0.5 + dragProgress * 0.5,
+          transition: dragging ? 'none' : 'transform 0.32s cubic-bezier(0.22,1,0.36,1), opacity 0.32s ease',
+          pointerEvents: 'none',
+        }}>
+          <HomeScreen onOpenApp={() => {}} phoneTheme={phoneTheme} />
+        </div>
+      )}
+
+      <div style={{ position: 'relative', zIndex: 2 }}>
+        <Screen
+          onOpenApp={(appId, origin) => {
+            if (SCREENS[appId]) {
+              setAppOrigin(origin ?? null)
+              setCurrentScreen(appId)
+            } else {
+              alert('Cette app arrive bientôt !')
+            }
+          }}
+          onBack={() => { setAppOrigin(null); setCurrentScreen('home') }}
+          onSwitchToDesktop={() => setMode('desktop')}
+          phoneTheme={phoneTheme}
+        />
+      </div>
 
       {/* Zone de geste — tout en bas de l'écran, comme la barre d'accueil iOS */}
       {currentScreen !== 'home' && (
