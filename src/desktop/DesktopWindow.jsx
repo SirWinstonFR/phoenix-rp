@@ -134,21 +134,21 @@ export default function DesktopWindow({
       {!maximized && (
         <>
           {/* Bords */}
-          <div onMouseDown={e => startResize(e, 'n')} style={{ position: 'absolute', top: 0, left: 10, right: 10, height: 6, cursor: 'n-resize' }} />
-          <div onMouseDown={e => startResize(e, 's')} style={{ position: 'absolute', bottom: 0, left: 10, right: 10, height: 6, cursor: 's-resize' }} />
-          <div onMouseDown={e => startResize(e, 'w')} style={{ position: 'absolute', left: 0, top: 10, bottom: 10, width: 6, cursor: 'w-resize' }} />
-          <div onMouseDown={e => startResize(e, 'e')} style={{ position: 'absolute', right: 0, top: 10, bottom: 10, width: 6, cursor: 'e-resize' }} />
+          <div onMouseDown={e => startResize(e, 'n')} style={{ position: 'absolute', top: 0, left: 12, right: 12, height: 9, cursor: 'n-resize', zIndex: 20 }} />
+          <div onMouseDown={e => startResize(e, 's')} style={{ position: 'absolute', bottom: 0, left: 12, right: 12, height: 9, cursor: 's-resize', zIndex: 20 }} />
+          <div onMouseDown={e => startResize(e, 'w')} style={{ position: 'absolute', left: 0, top: 12, bottom: 12, width: 9, cursor: 'w-resize', zIndex: 20 }} />
+          <div onMouseDown={e => startResize(e, 'e')} style={{ position: 'absolute', right: 0, top: 12, bottom: 12, width: 9, cursor: 'e-resize', zIndex: 20 }} />
 
           {/* Coins */}
-          <div onMouseDown={e => startResize(e, 'nw')} style={{ position: 'absolute', top: 0, left: 0, width: 14, height: 14, cursor: 'nw-resize' }} />
-          <div onMouseDown={e => startResize(e, 'ne')} style={{ position: 'absolute', top: 0, right: 0, width: 14, height: 14, cursor: 'ne-resize' }} />
-          <div onMouseDown={e => startResize(e, 'sw')} style={{ position: 'absolute', bottom: 0, left: 0, width: 14, height: 14, cursor: 'sw-resize' }} />
+          <div onMouseDown={e => startResize(e, 'nw')} style={{ position: 'absolute', top: 0, left: 0, width: 16, height: 16, cursor: 'nw-resize', zIndex: 21 }} />
+          <div onMouseDown={e => startResize(e, 'ne')} style={{ position: 'absolute', top: 0, right: 0, width: 16, height: 16, cursor: 'ne-resize', zIndex: 21 }} />
+          <div onMouseDown={e => startResize(e, 'sw')} style={{ position: 'absolute', bottom: 0, left: 0, width: 16, height: 16, cursor: 'sw-resize', zIndex: 21 }} />
           <div
             onMouseDown={e => startResize(e, 'se')}
             style={{
               position: 'absolute', bottom: 0, right: 0,
-              width: 16, height: 16, cursor: 'se-resize',
-              background: 'linear-gradient(135deg, transparent 50%, rgba(255,255,255,0.1) 50%)',
+              width: 18, height: 18, cursor: 'se-resize', zIndex: 21,
+              background: 'linear-gradient(135deg, transparent 50%, rgba(255,255,255,0.12) 50%)',
               borderRadius: '0 0 12px 0',
             }}
           />

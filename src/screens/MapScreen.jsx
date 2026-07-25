@@ -36,14 +36,8 @@ const CATEGORIES = [
   { id: 'autre',       label: 'Autre',       icon: '📍', color: '#b96eff' },
 ]
 
-const FILTERS = [
-  { id: 'all',         label: 'Tout' },
-  { id: 'mine',        label: 'À moi' },
-  { id: 'travail',     label: 'Travail' },
-  { id: 'commerce',    label: 'Commerce' },
-  { id: 'bar',         label: 'Bar' },
-  { id: 'gouvernance', label: 'Gouvernance' },
-]
+// Toutes les catégories togglables individuellement dans le panneau de filtres
+const FILTER_CATEGORIES = CATEGORIES.map(c => c.id)
 
 export default function MapScreen({ onBack }) {
   const { profile, user, updateProfile } = useAuth()
@@ -60,7 +54,10 @@ export default function MapScreen({ onBack }) {
   const [ownerSearch, setOwnerSearch]   = useState('')
   const [ownerResults, setOwnerResults] = useState([])
   const [newOwner, setNewOwner]         = useState(null)
-  const [locationFilter, setLocationFilter] = useState('all')
+  const [showFilterPanel, setShowFilterPanel] = useState(false)
+  const [filterSearch, setFilterSearch]        = useState('')
+  const [mineOnly, setMineOnly]                = useState(false)
+  const [activeCats, setActiveCats]            = useState(() => new Set(FILTER_CATEGORIES))
   const [pendingCoords, setPendingCoords] = useState(null)
   const [loading, setLoading]         = useState(true)
   const [infoPopup, setInfoPopup]               = useState(null)
@@ -286,18 +283,36 @@ export default function MapScreen({ onBack }) {
 
     setLocations(enriched)
     setUnplacedLocs(unplaced)
-    updateLocationMarkers(applyFilter(enriched, locationFilter))
+    updateLocationMarkers(applyFilter(enriched))
   }
 
-  function applyFilter(locs, filter) {
-    if (filter === 'all') return locs
-    if (filter === 'mine') return locs.filter(l => l.owner_id === profile.id)
-    return locs.filter(l => l.category === filter)
+  // Applique tous les critères actifs : catégories cochées, "à moi", recherche par nom
+  function applyFilter(locs) {
+    return locs.filter(l => {
+      if (mineOnly && l.owner_id !== profile.id) return false
+      if (!activeCats.has(l.category ?? 'autre')) return false
+      if (filterSearch.trim() && !l.name.toLowerCase().includes(filterSearch.trim().toLowerCase())) return false
+      return true
+    })
   }
 
-  function changeFilter(filter) {
-    setLocationFilter(filter)
-    updateLocationMarkers(applyFilter(locations, filter))
+  // Réapplique les marqueurs à chaque changement de filtre
+  useEffect(() => {
+    updateLocationMarkers(applyFilter(locations))
+  }, [activeCats, mineOnly, filterSearch, locations])
+
+  function toggleCategory(catId) {
+    setActiveCats(prev => {
+      const next = new Set(prev)
+      next.has(catId) ? next.delete(catId) : next.add(catId)
+      return next
+    })
+  }
+
+  function toggleAllCategories() {
+    setActiveCats(prev =>
+      prev.size === FILTER_CATEGORIES.length ? new Set() : new Set(FILTER_CATEGORIES)
+    )
   }
 
   function updatePlayerMarkers(players) {
@@ -631,30 +646,136 @@ export default function MapScreen({ onBack }) {
           </div>
         </div>
 
-        {/* Barre de filtres */}
+        {/* Bouton d'ouverture du panneau de filtres */}
         <div style={{
-          display: 'flex', gap: 6, padding: '8px 12px',
-          overflowX: 'auto', scrollbarWidth: 'none',
-          borderBottom: '1px solid var(--border)',
-          flexShrink: 0, zIndex: 40, position: 'relative',
-          background: 'var(--bg)',
+          display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px',
+          borderBottom: '1px solid var(--border)', flexShrink: 0,
+          zIndex: 40, position: 'relative', background: 'var(--bg)',
         }}>
-          {FILTERS.map(f => (
+          <button
+            onClick={() => setShowFilterPanel(true)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 7,
+              padding: '7px 14px', borderRadius: 20,
+              background: 'var(--glass)', border: '1px solid var(--border)',
+              color: 'var(--t1)', fontSize: 12, fontWeight: 700,
+              cursor: 'pointer', fontFamily: 'inherit',
+            }}
+          >
+            🎛️ Filtres
+            {(activeCats.size < FILTER_CATEGORIES.length || mineOnly) && (
+              <span style={{
+                width: 16, height: 16, borderRadius: '50%',
+                background: 'var(--accent)', color: '#fff',
+                fontSize: 9, fontWeight: 800,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                {activeCats.size + (mineOnly ? 1 : 0)}
+              </span>
+            )}
+          </button>
+          {(activeCats.size < FILTER_CATEGORIES.length || mineOnly || filterSearch) && (
             <button
-              key={f.id}
-              onClick={() => changeFilter(f.id)}
-              style={{
-                padding: '6px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700,
-                cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', flexShrink: 0,
-                background: locationFilter === f.id ? 'var(--accent)' : 'var(--glass)',
-                color: locationFilter === f.id ? '#fff' : 'var(--t3)',
-                border: locationFilter === f.id ? 'none' : '1px solid var(--border)',
-              }}
+              onClick={() => { setActiveCats(new Set(FILTER_CATEGORIES)); setMineOnly(false); setFilterSearch('') }}
+              style={{ background: 'none', border: 'none', color: 'var(--t3)', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}
             >
-              {f.label}
+              Réinitialiser
             </button>
-          ))}
+          )}
         </div>
+
+        {/* ══ PANNEAU DE FILTRES ══ */}
+        {showFilterPanel && (
+          <>
+            {/* Fond cliquable pour fermer */}
+            <div
+              onClick={() => setShowFilterPanel(false)}
+              style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 90 }}
+            />
+            <div style={{
+              position: 'absolute', top: 0, left: 0, bottom: 0,
+              width: 270, background: 'rgba(10,10,18,0.98)',
+              borderRight: '1px solid var(--border)',
+              zIndex: 91, display: 'flex', flexDirection: 'column',
+              boxShadow: '8px 0 30px rgba(0,0,0,0.6)',
+              animation: 'slideInLeft 0.25s cubic-bezier(0.22,1,0.36,1)',
+              backdropFilter: 'blur(20px)',
+            }}>
+              {/* Header */}
+              <div style={{
+                padding: '16px 16px 12px', borderBottom: '1px solid var(--border)',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              }}>
+                <p style={{ fontSize: 12, fontWeight: 800, color: 'var(--t1)', letterSpacing: '0.06em' }}>
+                  FILTRES DE LA CARTE
+                </p>
+                <button onClick={() => setShowFilterPanel(false)} style={{
+                  background: 'none', border: 'none', color: 'var(--t3)', fontSize: 16, cursor: 'pointer',
+                }}>✕</button>
+              </div>
+
+              {/* Recherche */}
+              <div style={{ padding: '12px 16px' }}>
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  background: 'var(--bg2)', border: '1px solid var(--border)',
+                  borderRadius: 12, padding: '9px 12px',
+                }}>
+                  <span style={{ fontSize: 13, color: 'var(--t3)' }}>🔍</span>
+                  <input
+                    value={filterSearch}
+                    onChange={e => setFilterSearch(e.target.value)}
+                    placeholder="Rechercher un lieu…"
+                    style={{
+                      flex: 1, background: 'none', border: 'none', outline: 'none',
+                      color: 'var(--t1)', fontSize: 13, fontFamily: 'inherit',
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 16px' }}>
+
+                {/* Activer/désactiver tout */}
+                <FilterRow
+                  label="ACTIVER/DÉSACTIVER TOUT"
+                  bold
+                  checked={activeCats.size === FILTER_CATEGORIES.length}
+                  onChange={toggleAllCategories}
+                />
+
+                {/* Statut */}
+                <FilterSectionTitle label="Statut" />
+                <FilterRow icon="❤️" label="Loué par vous" checked={mineOnly} onChange={() => setMineOnly(m => !m)} />
+
+                {/* Types de lieux */}
+                <FilterSectionTitle label="Types de lieux" />
+                {CATEGORIES.map(cat => (
+                  <FilterRow
+                    key={cat.id}
+                    icon={cat.icon}
+                    label={cat.label}
+                    checked={activeCats.has(cat.id)}
+                    onChange={() => toggleCategory(cat.id)}
+                  />
+                ))}
+              </div>
+
+              {/* Fermer */}
+              <button
+                onClick={() => setShowFilterPanel(false)}
+                style={{
+                  margin: 14, padding: '12px', borderRadius: 12, border: 'none',
+                  background: 'var(--grad)', color: '#fff',
+                  fontSize: 12, fontWeight: 800, letterSpacing: '0.05em',
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                FERMER LES FILTRES
+              </button>
+            </div>
+          </>
+        )}
 
         {/* Panneau admin — visible MJ uniquement */}
         {isMJ && showAdmin && unplacedLocs.length > 0 && (
@@ -1339,6 +1460,55 @@ export default function MapScreen({ onBack }) {
           </div>
         )}
 
+      </div>
+    </div>
+  )
+}
+
+// Titre de section dans le panneau de filtres
+function FilterSectionTitle({ label }) {
+  return (
+    <p style={{
+      fontSize: 10, fontWeight: 800, color: 'var(--accent)',
+      letterSpacing: '0.08em', textTransform: 'uppercase',
+      margin: '16px 0 8px',
+    }}>
+      {label}
+    </p>
+  )
+}
+
+// Ligne avec toggle façon iOS
+function FilterRow({ icon, label, checked, onChange, bold }) {
+  return (
+    <div
+      onClick={onChange}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 10,
+        padding: '9px 4px', cursor: 'pointer',
+      }}
+    >
+      {icon && <span style={{ fontSize: 15, width: 18, textAlign: 'center', flexShrink: 0 }}>{icon}</span>}
+      <span style={{
+        flex: 1, fontSize: bold ? 11 : 12.5,
+        fontWeight: bold ? 800 : 600,
+        color: bold ? 'var(--t2)' : 'var(--t1)',
+        letterSpacing: bold ? '0.04em' : 0,
+      }}>
+        {label}
+      </span>
+      <div style={{
+        width: 38, height: 22, borderRadius: 20, flexShrink: 0,
+        background: checked ? 'var(--accent)' : 'var(--bg3)',
+        border: `1px solid ${checked ? 'var(--accent)' : 'var(--border2)'}`,
+        position: 'relative', transition: 'background 0.2s, border-color 0.2s',
+      }}>
+        <div style={{
+          position: 'absolute', top: 2, left: checked ? 18 : 2,
+          width: 16, height: 16, borderRadius: '50%',
+          background: '#fff', transition: 'left 0.2s cubic-bezier(0.22,1,0.36,1)',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+        }} />
       </div>
     </div>
   )
