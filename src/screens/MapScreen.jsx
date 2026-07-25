@@ -24,6 +24,58 @@ const NEIGHBORHOODS = [
       [-112.0839, 33.4696],
     ],
   },
+  {
+    id: 'arcadia',
+    name: 'Arcadia',
+    color: '#22c55e',
+    // Bornes : 44th St (ouest) · 68th St (est) · Indian School Rd (sud) · Camelback Rd (nord)
+    coords: [
+      [-111.9780, 33.5093],
+      [-111.9400, 33.5093],
+      [-111.9400, 33.4948],
+      [-111.9780, 33.4948],
+      [-111.9780, 33.5093],
+    ],
+  },
+  {
+    id: 'melrose',
+    name: 'Melrose District',
+    color: '#ec4899',
+    // Bornes : 9th Ave (ouest) · 5th Ave (est) · Indian School Rd (sud) · Camelback Rd (nord)
+    coords: [
+      [-112.0890, 33.5093],
+      [-112.0810, 33.5093],
+      [-112.0810, 33.4948],
+      [-112.0890, 33.4948],
+      [-112.0890, 33.5093],
+    ],
+  },
+  {
+    id: 'ahwatukee',
+    name: 'Ahwatukee',
+    color: '#f59e0b',
+    // Bornes approximatives : South Mountain (nord) · I-10 (sud) · 32nd St (est) · 51st Ave (ouest)
+    coords: [
+      [-112.1000, 33.3650],
+      [-112.0300, 33.3650],
+      [-112.0300, 33.3090],
+      [-112.1000, 33.3090],
+      [-112.1000, 33.3650],
+    ],
+  },
+  {
+    id: 'desert-ridge',
+    name: 'Desert Ridge',
+    color: '#4dd9ff',
+    // Bornes approximatives : Tatum Blvd (ouest) · 56th St (est) · Loop 101 (nord) · Union Hills Dr (sud)
+    coords: [
+      [-111.9800, 33.6750],
+      [-111.9400, 33.6750],
+      [-111.9400, 33.6550],
+      [-111.9800, 33.6550],
+      [-111.9800, 33.6750],
+    ],
+  },
 ]
 
 // Catégories de lieux
@@ -58,6 +110,7 @@ export default function MapScreen({ onBack }) {
   const [filterSearch, setFilterSearch]        = useState('')
   const [mineOnly, setMineOnly]                = useState(false)
   const [activeCats, setActiveCats]            = useState(() => new Set(FILTER_CATEGORIES))
+  const [showNeighborhoods, setShowNeighborhoods] = useState(true)
   const [pendingCoords, setPendingCoords] = useState(null)
   const [loading, setLoading]         = useState(true)
   const [infoPopup, setInfoPopup]               = useState(null)
@@ -300,6 +353,16 @@ export default function MapScreen({ onBack }) {
   useEffect(() => {
     updateLocationMarkers(applyFilter(locations))
   }, [activeCats, mineOnly, filterSearch, locations])
+
+  // Affiche/masque les quartiers sur la carte
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !map.getLayer('neighborhood-fill')) return
+    const visibility = showNeighborhoods ? 'visible' : 'none'
+    map.setLayoutProperty('neighborhood-fill', 'visibility', visibility)
+    map.setLayoutProperty('neighborhood-line', 'visibility', visibility)
+    map.setLayoutProperty('neighborhood-label', 'visibility', visibility)
+  }, [showNeighborhoods, loading])
 
   function toggleCategory(catId) {
     setActiveCats(prev => {
@@ -759,6 +822,30 @@ export default function MapScreen({ onBack }) {
                     onChange={() => toggleCategory(cat.id)}
                   />
                 ))}
+
+                {/* Quartiers */}
+                <FilterSectionTitle label="Quartiers" />
+                <FilterRow
+                  icon="🏘️"
+                  label="Afficher les quartiers"
+                  checked={showNeighborhoods}
+                  onChange={() => setShowNeighborhoods(v => !v)}
+                />
+                {showNeighborhoods && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '4px 4px 0 30px' }}>
+                    {NEIGHBORHOODS.map(n => (
+                      <span key={n.id} style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 5,
+                        fontSize: 10, color: 'var(--t3)',
+                        background: 'var(--bg2)', border: '1px solid var(--border)',
+                        borderRadius: 8, padding: '3px 8px',
+                      }}>
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: n.color }} />
+                        {n.name}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Fermer */}
