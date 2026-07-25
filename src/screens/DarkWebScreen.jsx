@@ -113,65 +113,89 @@ export default function DarkWebScreen({ onBack }) {
   // ── PORTE D'ACCÈS ──
   if (!unlocked) {
     return (
-      <div className="phone" style={{ background: '#050302' }}>
+      <div className="phone" style={{ background: '#040201' }}>
         <div style={{
           flex: 1, display: 'flex', flexDirection: 'column',
-          alignItems: 'center', justifyContent: 'center', gap: 22,
-          padding: 24, fontFamily: 'Inter, sans-serif',
+          alignItems: 'center', justifyContent: 'center', gap: 20,
+          padding: 24, fontFamily: "'Courier New', monospace",
           position: 'relative', overflow: 'hidden',
         }}>
+          {/* Scanlines orange */}
           <div style={{
-            position: 'absolute', top: '30%', left: '50%', transform: 'translate(-50%,-50%)',
-            width: 260, height: 260, borderRadius: '50%',
+            position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0,
+            background: 'repeating-linear-gradient(0deg, rgba(232,117,44,0.025) 0px, transparent 1px, transparent 3px)',
+          }} />
+
+          {/* Bruit diagonal subtil */}
+          <div style={{
+            position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0, opacity: 0.4,
+            background: 'repeating-linear-gradient(115deg, transparent 0px, transparent 60px, rgba(232,117,44,0.02) 61px, transparent 62px)',
+          }} />
+
+          <div style={{
+            position: 'absolute', top: '28%', left: '50%', transform: 'translate(-50%,-50%)',
+            width: 280, height: 280, borderRadius: '50%',
             background: `radial-gradient(circle, ${ORANGE_DIM} 0%, transparent 70%)`,
-            pointerEvents: 'none',
+            pointerEvents: 'none', animation: 'gatePulse 3.5s ease-in-out infinite',
           }} />
 
           <button onClick={onBack} style={{
             position: 'absolute', top: 20, left: 20,
             background: 'none', border: 'none', color: 'rgba(232,117,44,0.4)',
-            fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
+            fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', zIndex: 2,
           }}>← quitter</button>
+
+          {/* Statut connexion façon terminal */}
+          <p style={{
+            fontSize: 9, color: 'rgba(232,117,44,0.35)', letterSpacing: '0.1em',
+            position: 'relative', zIndex: 1,
+          }}>
+            <span className="gate-blink">●</span> CONNEXION AU RÉSEAU MASQUÉ…
+          </p>
 
           <div style={{
             fontSize: 38, position: 'relative', zIndex: 1,
-            filter: `drop-shadow(0 0 14px ${ORANGE_DIM})`,
+            filter: `drop-shadow(0 0 16px ${ORANGE_DIM})`,
+            animation: 'gateFlicker 4s ease-in-out infinite',
           }}>🧅</div>
 
           <p style={{
             fontSize: 13, fontWeight: 700, color: ORANGE_LIGHT, letterSpacing: '0.18em',
             position: 'relative', zIndex: 1,
           }}>
-            ACCÈS RESTREINT
+            ACCÈS RESTREINT<span className="gate-cursor">_</span>
           </p>
 
           <div style={{
             width: '100%', maxWidth: 230, position: 'relative', zIndex: 1,
             animation: error ? 'shakeGate 0.4s ease' : 'none',
           }}>
+            <p style={{ fontSize: 9, color: 'rgba(232,117,44,0.4)', letterSpacing: '0.12em', marginBottom: 6, textAlign: 'center' }}>
+              CLEF D'ACCÈS
+            </p>
             <input
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && checkPassword()}
-              placeholder="mot de passe"
+              placeholder="••••••••"
               autoFocus
               style={{
-                width: '100%', background: 'rgba(255,255,255,0.03)',
-                border: `1px solid ${error ? '#ef4444' : 'rgba(232,117,44,0.25)'}`,
-                borderRadius: 12, padding: '13px 16px',
-                color: '#f5f2ee', fontSize: 15, fontFamily: 'inherit',
-                textAlign: 'center', letterSpacing: '0.15em',
-                outline: 'none', transition: 'border-color 0.2s',
+                width: '100%', background: 'rgba(232,117,44,0.04)',
+                border: `1px solid ${error ? '#ef4444' : 'rgba(232,117,44,0.3)'}`,
+                borderRadius: 6, padding: '13px 16px',
+                color: ORANGE_LIGHT, fontSize: 15, fontFamily: "'Courier New', monospace",
+                textAlign: 'center', letterSpacing: '0.3em',
+                outline: 'none', transition: 'border-color 0.2s, box-shadow 0.2s',
               }}
-              onFocus={e => !error && (e.target.style.borderColor = ORANGE)}
-              onBlur={e => !error && (e.target.style.borderColor = 'rgba(232,117,44,0.25)')}
+              onFocus={e => { if (!error) { e.target.style.borderColor = ORANGE; e.target.style.boxShadow = `0 0 0 3px ${ORANGE_DIM}` } }}
+              onBlur={e => { if (!error) { e.target.style.borderColor = 'rgba(232,117,44,0.3)'; e.target.style.boxShadow = 'none' } }}
             />
           </div>
 
           {error && (
-            <p style={{ fontSize: 11, color: '#ef4444', letterSpacing: '0.05em', position: 'relative', zIndex: 1 }}>
-              Accès refusé
+            <p style={{ fontSize: 11, color: '#ef4444', letterSpacing: '0.08em', position: 'relative', zIndex: 1 }}>
+              [ ACCÈS REFUSÉ ]
             </p>
           )}
 
@@ -179,18 +203,25 @@ export default function DarkWebScreen({ onBack }) {
             onClick={checkPassword}
             disabled={checking || !password}
             style={{
-              padding: '12px 32px', borderRadius: 12,
-              background: password ? `linear-gradient(135deg, ${ORANGE}, #c85f1e)` : 'rgba(255,255,255,0.05)',
+              padding: '12px 32px', borderRadius: 6,
+              background: password ? `linear-gradient(135deg, ${ORANGE}, #c85f1e)` : 'rgba(255,255,255,0.04)',
               border: 'none',
-              color: password ? '#fff' : '#555', fontSize: 13, fontWeight: 700, letterSpacing: '0.04em',
-              cursor: password ? 'pointer' : 'not-allowed', fontFamily: 'inherit',
+              color: password ? '#000' : '#555', fontSize: 13, fontWeight: 800, letterSpacing: '0.1em',
+              cursor: password ? 'pointer' : 'not-allowed', fontFamily: "'Courier New', monospace",
               boxShadow: password ? `0 6px 20px ${ORANGE_DIM}` : 'none',
               transition: 'all 0.2s',
               position: 'relative', zIndex: 1,
             }}
           >
-            {checking ? 'Vérification…' : 'Entrer'}
+            {checking ? '[ VÉRIFICATION… ]' : '[ ENTRER ]'}
           </button>
+
+          <p style={{
+            fontSize: 8, color: 'rgba(232,117,44,0.2)', letterSpacing: '0.06em',
+            position: 'relative', zIndex: 1, marginTop: 4,
+          }}>
+            NŒUD #{Math.random().toString(16).slice(2, 8).toUpperCase()} · CHIFFRÉ
+          </p>
         </div>
 
         <style>{`
@@ -198,6 +229,27 @@ export default function DarkWebScreen({ onBack }) {
             0%, 100% { transform: translateX(0); }
             25% { transform: translateX(-8px); }
             75% { transform: translateX(8px); }
+          }
+          @keyframes gatePulse {
+            0%, 100% { opacity: 0.6; transform: translate(-50%,-50%) scale(1); }
+            50%      { opacity: 1; transform: translate(-50%,-50%) scale(1.08); }
+          }
+          @keyframes gateFlicker {
+            0%, 92%, 100% { opacity: 1; }
+            93% { opacity: 0.4; }
+            94% { opacity: 1; }
+            96% { opacity: 0.5; }
+            97% { opacity: 1; }
+          }
+          .gate-blink {
+            animation: gateBlinkDot 1.4s ease-in-out infinite;
+          }
+          @keyframes gateBlinkDot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.2; }
+          }
+          .gate-cursor {
+            animation: gateBlinkDot 1s step-start infinite;
           }
         `}</style>
       </div>
