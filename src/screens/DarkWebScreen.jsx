@@ -1,22 +1,26 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import { supabase } from '../supabase'
 import { useAuth } from '../context/AuthContext'
 
+const ORANGE = '#e8752c'
+const ORANGE_LIGHT = '#f5a052'
+const ORANGE_DIM = 'rgba(232,117,44,0.15)'
+
 const CATEGORIES = [
-  { id: 'identity',        label: 'Identité',        sub: 'Falsification & nettoyage', icon: '🪪' },
-  { id: 'criminal_record', label: 'Casier judiciaire', sub: 'Effacement de dossiers',   icon: '📁' },
-  { id: 'vehicle',         label: 'Véhicules',        sub: 'Blanchiment & export',      icon: '🚗' },
-  { id: 'hacking',         label: 'Piratage',         sub: 'Cyber-espionnage',          icon: '💻' },
-  { id: 'leaks',           label: 'Leaks',            sub: 'Informations & dossiers',   icon: '🗂️' },
+  { id: 'identity',        label: 'Identité',          sub: 'Falsification & nettoyage', icon: '🪪' },
+  { id: 'criminal_record', label: 'Casier judiciaire', sub: 'Effacement de dossiers',    icon: '📁' },
+  { id: 'vehicle',         label: 'Véhicules',         sub: 'Blanchiment & export',      icon: '🚗' },
+  { id: 'hacking',         label: 'Piratage',          sub: 'Cyber-espionnage',          icon: '💻' },
+  { id: 'leaks',           label: 'Leaks',             sub: 'Informations & dossiers',   icon: '🗂️' },
 ]
 
 export default function DarkWebScreen({ onBack }) {
-  const { user, profile, updateProfile } = useAuth()
+  const { profile, updateProfile } = useAuth()
   const [unlocked, setUnlocked]   = useState(false)
   const [password, setPassword]   = useState('')
   const [error, setError]         = useState(false)
   const [checking, setChecking]   = useState(false)
-  const [view, setView]           = useState('home') // 'home' | 'category' | 'detail' | 'bounties' | 'newBounty'
+  const [view, setView]           = useState('home')
   const [selectedCat, setSelectedCat]   = useState(null)
   const [listings, setListings]         = useState([])
   const [selectedItem, setSelectedItem] = useState(null)
@@ -24,7 +28,6 @@ export default function DarkWebScreen({ onBack }) {
   const [ordering, setOrdering]         = useState(false)
   const [toast, setToast]               = useState(null)
 
-  // Nouvelle prime
   const [bTarget, setBTarget] = useState('')
   const [bReason, setBReason] = useState('')
   const [bAmount, setBAmount] = useState('')
@@ -78,7 +81,7 @@ export default function DarkWebScreen({ onBack }) {
       await updateProfile({ balance: balance - item.price })
       await supabase.from('transactions').insert({
         from_user_id: profile.id,
-        to_user_id:   profile.id, // pas de destinataire traçable — juste un débit
+        to_user_id:   profile.id,
         amount:       item.price,
         type:         'purchase',
         note:         `Darknet — ${item.name}`,
@@ -110,41 +113,40 @@ export default function DarkWebScreen({ onBack }) {
   // ── PORTE D'ACCÈS ──
   if (!unlocked) {
     return (
-      <div className="phone" style={{ background: '#000' }}>
+      <div className="phone" style={{ background: '#050302' }}>
         <div style={{
           flex: 1, display: 'flex', flexDirection: 'column',
-          alignItems: 'center', justifyContent: 'center', gap: 20,
-          padding: 24, fontFamily: "'Courier New', monospace",
+          alignItems: 'center', justifyContent: 'center', gap: 22,
+          padding: 24, fontFamily: 'Inter, sans-serif',
           position: 'relative', overflow: 'hidden',
         }}>
-          {/* Scanlines */}
           <div style={{
-            position: 'absolute', inset: 0, pointerEvents: 'none',
-            background: 'repeating-linear-gradient(0deg, rgba(0,255,136,0.02) 0px, transparent 1px, transparent 2px)',
+            position: 'absolute', top: '30%', left: '50%', transform: 'translate(-50%,-50%)',
+            width: 260, height: 260, borderRadius: '50%',
+            background: `radial-gradient(circle, ${ORANGE_DIM} 0%, transparent 70%)`,
+            pointerEvents: 'none',
           }} />
 
           <button onClick={onBack} style={{
             position: 'absolute', top: 20, left: 20,
-            background: 'none', border: 'none', color: '#2a5c3f',
-            fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
+            background: 'none', border: 'none', color: 'rgba(232,117,44,0.4)',
+            fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
           }}>← quitter</button>
 
-          <div style={{ fontSize: 40, filter: 'grayscale(1)', opacity: 0.6 }}>🧅</div>
+          <div style={{
+            fontSize: 38, position: 'relative', zIndex: 1,
+            filter: `drop-shadow(0 0 14px ${ORANGE_DIM})`,
+          }}>🧅</div>
 
           <p style={{
-            fontSize: 13, color: '#00ff88', letterSpacing: '0.15em',
-            textShadow: '0 0 8px rgba(0,255,136,0.5)',
+            fontSize: 13, fontWeight: 700, color: ORANGE_LIGHT, letterSpacing: '0.18em',
+            position: 'relative', zIndex: 1,
           }}>
             ACCÈS RESTREINT
           </p>
 
-          <p style={{ fontSize: 11, color: '#2a5c3f', textAlign: 'center', maxWidth: 220, lineHeight: 1.6 }}>
-            Vous êtes sur le point d'entrer dans un réseau non indexé.
-            Aucune identité n'est requise. Seul le mot de passe compte.
-          </p>
-
           <div style={{
-            width: '100%', maxWidth: 240,
+            width: '100%', maxWidth: 230, position: 'relative', zIndex: 1,
             animation: error ? 'shakeGate 0.4s ease' : 'none',
           }}>
             <input
@@ -152,22 +154,24 @@ export default function DarkWebScreen({ onBack }) {
               value={password}
               onChange={e => setPassword(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && checkPassword()}
-              placeholder="••••••••"
+              placeholder="mot de passe"
               autoFocus
               style={{
-                width: '100%', background: '#0a0a0a',
-                border: `1px solid ${error ? '#ff3355' : '#1a3d28'}`,
-                borderRadius: 4, padding: '12px 14px',
-                color: '#00ff88', fontSize: 16, fontFamily: 'inherit',
-                textAlign: 'center', letterSpacing: '0.3em',
-                outline: 'none',
+                width: '100%', background: 'rgba(255,255,255,0.03)',
+                border: `1px solid ${error ? '#ef4444' : 'rgba(232,117,44,0.25)'}`,
+                borderRadius: 12, padding: '13px 16px',
+                color: '#f5f2ee', fontSize: 15, fontFamily: 'inherit',
+                textAlign: 'center', letterSpacing: '0.15em',
+                outline: 'none', transition: 'border-color 0.2s',
               }}
+              onFocus={e => !error && (e.target.style.borderColor = ORANGE)}
+              onBlur={e => !error && (e.target.style.borderColor = 'rgba(232,117,44,0.25)')}
             />
           </div>
 
           {error && (
-            <p style={{ fontSize: 11, color: '#ff3355', letterSpacing: '0.05em' }}>
-              ACCÈS REFUSÉ
+            <p style={{ fontSize: 11, color: '#ef4444', letterSpacing: '0.05em', position: 'relative', zIndex: 1 }}>
+              Accès refusé
             </p>
           )}
 
@@ -175,14 +179,17 @@ export default function DarkWebScreen({ onBack }) {
             onClick={checkPassword}
             disabled={checking || !password}
             style={{
-              padding: '10px 28px', borderRadius: 4,
-              background: 'none', border: '1px solid #00ff88',
-              color: '#00ff88', fontSize: 12, letterSpacing: '0.1em',
-              cursor: 'pointer', fontFamily: 'inherit',
-              opacity: password ? 1 : 0.3,
+              padding: '12px 32px', borderRadius: 12,
+              background: password ? `linear-gradient(135deg, ${ORANGE}, #c85f1e)` : 'rgba(255,255,255,0.05)',
+              border: 'none',
+              color: password ? '#fff' : '#555', fontSize: 13, fontWeight: 700, letterSpacing: '0.04em',
+              cursor: password ? 'pointer' : 'not-allowed', fontFamily: 'inherit',
+              boxShadow: password ? `0 6px 20px ${ORANGE_DIM}` : 'none',
+              transition: 'all 0.2s',
+              position: 'relative', zIndex: 1,
             }}
           >
-            {checking ? 'VÉRIFICATION…' : 'CONNEXION'}
+            {checking ? 'Vérification…' : 'Entrer'}
           </button>
         </div>
 
@@ -200,12 +207,12 @@ export default function DarkWebScreen({ onBack }) {
   // ── VUE PRIMES ──
   if (view === 'bounties') {
     return (
-      <div className="phone" style={{ background: '#0a0510' }}>
+      <div className="phone" style={{ background: '#050302' }}>
         <div className="screen">
-          <div className="app-header" style={{ borderColor: 'rgba(139,92,246,0.2)' }}>
-            <button className="icon-btn" onClick={() => setView('home')}>←</button>
-            <span className="app-header-title" style={{ color: '#a855f7', WebkitTextFillColor: '#a855f7' }}>Contrats</span>
-            <button className="icon-btn" onClick={() => setView('newBounty')} style={{ color: '#a855f7' }}>➕</button>
+          <div className="app-header" style={{ borderColor: 'rgba(232,117,44,0.15)' }}>
+            <button className="icon-btn" onClick={() => setView('home')} style={{ color: ORANGE_LIGHT }}>←</button>
+            <span className="app-header-title" style={{ color: ORANGE_LIGHT, WebkitTextFillColor: ORANGE_LIGHT }}>Contrats</span>
+            <button className="icon-btn" onClick={() => setView('newBounty')} style={{ color: ORANGE_LIGHT }}>➕</button>
           </div>
 
           <div className="feed" style={{ flex: 1, padding: '12px 14px' }}>
@@ -216,20 +223,21 @@ export default function DarkWebScreen({ onBack }) {
                 <p className="empty-sub">Sois le premier à mettre une tête à prix.</p>
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {bounties.map(b => (
-                  <div key={b.id} style={{
-                    background: 'rgba(139,92,246,0.05)', border: '1px solid rgba(139,92,246,0.2)',
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+                {bounties.map((b, i) => (
+                  <div key={b.id} className="dw-row" style={{
+                    background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(232,117,44,0.15)',
                     borderRadius: 14, padding: '14px 16px',
+                    animation: `dwFadeUp 0.3s ease ${i * 0.05}s both`,
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
-                      <p style={{ fontSize: 15, fontWeight: 800, color: '#fff' }}>{b.target_name}</p>
-                      <p style={{ fontSize: 16, fontWeight: 900, color: '#a855f7', fontFamily: "'Space Grotesk', monospace" }}>
+                      <p style={{ fontSize: 15, fontWeight: 800, color: '#f5f2ee' }}>{b.target_name}</p>
+                      <p style={{ fontSize: 16, fontWeight: 900, color: ORANGE_LIGHT, fontFamily: "'Space Grotesk', monospace" }}>
                         ${b.amount.toLocaleString()}
                       </p>
                     </div>
-                    {b.reason && <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', lineHeight: 1.5 }}>{b.reason}</p>}
-                    <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', marginTop: 8, letterSpacing: '0.05em' }}>
+                    {b.reason && <p style={{ fontSize: 12, color: 'rgba(245,242,238,0.45)', lineHeight: 1.5 }}>{b.reason}</p>}
+                    <p style={{ fontSize: 9, color: 'rgba(245,242,238,0.2)', marginTop: 8, letterSpacing: '0.08em' }}>
                       POSTÉ ANONYMEMENT
                     </p>
                   </div>
@@ -245,11 +253,11 @@ export default function DarkWebScreen({ onBack }) {
   // ── NOUVELLE PRIME ──
   if (view === 'newBounty') {
     return (
-      <div className="phone" style={{ background: '#0a0510' }}>
+      <div className="phone" style={{ background: '#050302' }}>
         <div className="screen">
-          <div className="app-header" style={{ borderColor: 'rgba(139,92,246,0.2)' }}>
-            <button className="icon-btn" onClick={() => setView('bounties')}>←</button>
-            <span className="app-header-title" style={{ color: '#a855f7', WebkitTextFillColor: '#a855f7' }}>Nouveau contrat</span>
+          <div className="app-header" style={{ borderColor: 'rgba(232,117,44,0.15)' }}>
+            <button className="icon-btn" onClick={() => setView('bounties')} style={{ color: ORANGE_LIGHT }}>←</button>
+            <span className="app-header-title" style={{ color: ORANGE_LIGHT, WebkitTextFillColor: ORANGE_LIGHT }}>Nouveau contrat</span>
             <span style={{ width: 32 }} />
           </div>
 
@@ -269,15 +277,12 @@ export default function DarkWebScreen({ onBack }) {
             <button
               onClick={postBounty}
               disabled={bPosting || !bTarget.trim() || !bAmount}
-              style={{
-                padding: '13px', borderRadius: 14, border: 'none',
-                background: 'linear-gradient(135deg, #a855f7, #7c3aed)',
-                color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-              }}
+              className="dw-btn-primary"
+              style={{ opacity: (!bTarget.trim() || !bAmount) ? 0.4 : 1 }}
             >
               {bPosting ? 'Publication…' : '🎯 Publier le contrat'}
             </button>
-            <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', textAlign: 'center' }}>
+            <p style={{ fontSize: 10, color: 'rgba(245,242,238,0.2)', textAlign: 'center' }}>
               Le contrat est publié anonymement.
             </p>
           </div>
@@ -289,33 +294,37 @@ export default function DarkWebScreen({ onBack }) {
   // ── DÉTAIL D'UN SERVICE ──
   if (view === 'detail' && selectedItem) {
     return (
-      <div className="phone" style={{ background: '#0a0510' }}>
+      <div className="phone" style={{ background: '#050302' }}>
         <div className="screen">
-          <div className="app-header" style={{ borderColor: 'rgba(139,92,246,0.2)' }}>
-            <button className="icon-btn" onClick={() => setView('category')}>←</button>
-            <span className="app-header-title" style={{ color: '#a855f7', WebkitTextFillColor: '#a855f7' }}>Détail</span>
+          <div className="app-header" style={{ borderColor: 'rgba(232,117,44,0.15)' }}>
+            <button className="icon-btn" onClick={() => setView('category')} style={{ color: ORANGE_LIGHT }}>←</button>
+            <span className="app-header-title" style={{ color: ORANGE_LIGHT, WebkitTextFillColor: ORANGE_LIGHT }}>Détail</span>
             <span style={{ width: 32 }} />
           </div>
 
-          <div style={{ flex: 1, padding: '24px 20px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+          <div style={{ flex: 1, padding: '26px 20px', display: 'flex', flexDirection: 'column', gap: 20 }}>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 44, marginBottom: 10 }}>{selectedItem.icon}</div>
-              <p style={{ fontSize: 19, fontWeight: 800, color: '#fff', marginBottom: 6 }}>{selectedItem.name}</p>
-              <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', lineHeight: 1.6 }}>{selectedItem.description}</p>
+              <div style={{
+                width: 68, height: 68, borderRadius: 20, margin: '0 auto 16px',
+                background: ORANGE_DIM, border: `1px solid rgba(232,117,44,0.3)`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30,
+              }}>{selectedItem.icon}</div>
+              <p style={{ fontSize: 19, fontWeight: 800, color: '#f5f2ee', marginBottom: 8 }}>{selectedItem.name}</p>
+              <p style={{ fontSize: 13, color: 'rgba(245,242,238,0.45)', lineHeight: 1.6 }}>{selectedItem.description}</p>
             </div>
 
             <div style={{
-              background: 'rgba(168,85,247,0.08)', border: '1px solid rgba(168,85,247,0.25)',
+              background: ORANGE_DIM, border: '1px solid rgba(232,117,44,0.3)',
               borderRadius: 16, padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
             }}>
               <div>
-                <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>PRIX</p>
-                <p style={{ fontSize: 24, fontWeight: 900, color: '#a855f7', fontFamily: "'Space Grotesk', monospace" }}>
+                <p style={{ fontSize: 10, color: 'rgba(245,242,238,0.4)' }}>PRIX</p>
+                <p style={{ fontSize: 24, fontWeight: 900, color: ORANGE_LIGHT, fontFamily: "'Space Grotesk', monospace" }}>
                   ${selectedItem.price.toLocaleString()}
                 </p>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>SOLDE</p>
+                <p style={{ fontSize: 10, color: 'rgba(245,242,238,0.4)' }}>SOLDE</p>
                 <p style={{ fontSize: 13, fontWeight: 700, color: balance >= selectedItem.price ? '#22c55e' : '#ef4444' }}>
                   ${balance.toLocaleString()}
                 </p>
@@ -325,18 +334,15 @@ export default function DarkWebScreen({ onBack }) {
             <button
               onClick={() => order(selectedItem)}
               disabled={ordering || balance < selectedItem.price}
+              className="dw-btn-primary"
               style={{
-                padding: '14px', borderRadius: 14, border: 'none',
-                background: balance >= selectedItem.price
-                  ? 'linear-gradient(135deg, #a855f7, #7c3aed)'
-                  : 'rgba(255,255,255,0.06)',
-                color: balance >= selectedItem.price ? '#fff' : '#555',
-                fontSize: 15, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit',
+                opacity: balance < selectedItem.price ? 0.4 : 1,
+                cursor: balance < selectedItem.price ? 'not-allowed' : 'pointer',
               }}
             >
               {ordering ? 'Transaction…' : balance < selectedItem.price ? 'Fonds insuffisants' : 'Commander'}
             </button>
-            <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', textAlign: 'center' }}>
+            <p style={{ fontSize: 10, color: 'rgba(245,242,238,0.18)', textAlign: 'center' }}>
               Transaction anonyme. Aucun remboursement.
             </p>
           </div>
@@ -349,11 +355,11 @@ export default function DarkWebScreen({ onBack }) {
   // ── VUE CATÉGORIE ──
   if (view === 'category' && selectedCat) {
     return (
-      <div className="phone" style={{ background: '#0a0510' }}>
+      <div className="phone" style={{ background: '#050302' }}>
         <div className="screen">
-          <div className="app-header" style={{ borderColor: 'rgba(139,92,246,0.2)' }}>
-            <button className="icon-btn" onClick={() => setView('home')}>←</button>
-            <span className="app-header-title" style={{ color: '#a855f7', WebkitTextFillColor: '#a855f7' }}>{selectedCat.label}</span>
+          <div className="app-header" style={{ borderColor: 'rgba(232,117,44,0.15)' }}>
+            <button className="icon-btn" onClick={() => setView('home')} style={{ color: ORANGE_LIGHT }}>←</button>
+            <span className="app-header-title" style={{ color: ORANGE_LIGHT, WebkitTextFillColor: ORANGE_LIGHT }}>{selectedCat.label}</span>
             <span style={{ width: 32 }} />
           </div>
 
@@ -365,29 +371,31 @@ export default function DarkWebScreen({ onBack }) {
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {listings.map(item => (
+                {listings.map((item, i) => (
                   <div
                     key={item.id}
+                    className="dw-row"
                     onClick={() => { setSelectedItem(item); setView('detail') }}
                     style={{
-                      background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)',
+                      background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)',
                       borderRadius: 14, padding: '12px 14px', cursor: 'pointer',
                       display: 'flex', alignItems: 'center', gap: 12,
+                      animation: `dwFadeUp 0.3s ease ${i * 0.05}s both`,
                     }}
                   >
                     <div style={{
-                      width: 40, height: 40, borderRadius: 10, flexShrink: 0,
-                      background: 'rgba(168,85,247,0.1)', border: '1px solid rgba(168,85,247,0.2)',
+                      width: 40, height: 40, borderRadius: 11, flexShrink: 0,
+                      background: ORANGE_DIM, border: '1px solid rgba(232,117,44,0.25)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18,
                     }}>{item.icon}</div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{item.name}</p>
+                      <p style={{ fontSize: 13, fontWeight: 700, color: '#f5f2ee' }}>{item.name}</p>
                       <p style={{
-                        fontSize: 11, color: 'rgba(255,255,255,0.35)',
+                        fontSize: 11, color: 'rgba(245,242,238,0.35)',
                         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                       }}>{item.description}</p>
                     </div>
-                    <p style={{ fontSize: 14, fontWeight: 800, color: '#a855f7', fontFamily: "'Space Grotesk', monospace", flexShrink: 0 }}>
+                    <p style={{ fontSize: 14, fontWeight: 800, color: ORANGE_LIGHT, fontFamily: "'Space Grotesk', monospace", flexShrink: 0 }}>
                       ${item.price.toLocaleString()}
                     </p>
                   </div>
@@ -402,69 +410,104 @@ export default function DarkWebScreen({ onBack }) {
 
   // ── ACCUEIL DU MARCHÉ ──
   return (
-    <div className="phone" style={{ background: '#0a0510' }}>
+    <div className="phone" style={{ background: '#050302' }}>
       <div className="screen">
-        <div className="app-header" style={{ borderColor: 'rgba(139,92,246,0.2)', background: 'rgba(10,5,16,0.9)' }}>
-          <button className="icon-btn" onClick={onBack} style={{ color: '#a855f7' }}>←</button>
+        <div className="app-header" style={{ borderColor: 'rgba(232,117,44,0.15)', background: 'rgba(5,3,2,0.9)' }}>
+          <button className="icon-btn" onClick={onBack} style={{ color: ORANGE_LIGHT }}>←</button>
           <span style={{
             fontSize: 17, fontWeight: 800, letterSpacing: -0.3,
-            background: 'linear-gradient(135deg, #a855f7, #6d28d9)',
-            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+            color: '#f5f2ee',
           }}>🧅 The Hollow</span>
           <span style={{ width: 32 }} />
         </div>
 
-        <div style={{ flex: 1, overflowY: 'auto', padding: '16px', scrollbarWidth: 'none' }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '18px 16px', scrollbarWidth: 'none' }}>
 
-          <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', textAlign: 'center', letterSpacing: '0.1em', marginBottom: 20 }}>
-            RÉSEAU NON INDEXÉ · ANONYMAT GARANTI
-          </p>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
-            {CATEGORIES.map(cat => (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
+            {CATEGORIES.map((cat, i) => (
               <div
                 key={cat.id}
+                className="dw-cat"
                 onClick={() => openCategory(cat)}
                 style={{
-                  background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)',
+                  background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)',
                   borderRadius: 16, padding: '16px 14px', cursor: 'pointer',
-                  transition: 'border-color 0.2s, background 0.2s',
+                  animation: `dwFadeUp 0.35s cubic-bezier(0.22,1,0.36,1) ${i * 0.06}s both`,
                 }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(168,85,247,0.4)'; e.currentTarget.style.background = 'rgba(168,85,247,0.05)' }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'; e.currentTarget.style.background = 'rgba(255,255,255,0.025)' }}
               >
                 <div style={{ fontSize: 24, marginBottom: 8 }}>{cat.icon}</div>
-                <p style={{ fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 2 }}>{cat.label}</p>
-                <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)' }}>{cat.sub}</p>
+                <p style={{ fontSize: 13, fontWeight: 700, color: '#f5f2ee', marginBottom: 2 }}>{cat.label}</p>
+                <p style={{ fontSize: 10, color: 'rgba(245,242,238,0.35)' }}>{cat.sub}</p>
               </div>
             ))}
           </div>
 
-          {/* Tableau des primes */}
           <div
+            className="dw-row"
             onClick={() => { setView('bounties'); fetchBounties() }}
             style={{
-              background: 'linear-gradient(135deg, rgba(168,85,247,0.1), rgba(109,40,217,0.05))',
-              border: '1px solid rgba(168,85,247,0.25)',
+              background: `linear-gradient(135deg, ${ORANGE_DIM}, rgba(232,117,44,0.03))`,
+              border: '1px solid rgba(232,117,44,0.3)',
               borderRadius: 16, padding: '18px 16px', cursor: 'pointer',
               display: 'flex', alignItems: 'center', gap: 14,
+              animation: 'dwFadeUp 0.35s ease 0.3s both',
             }}
           >
             <div style={{ fontSize: 28 }}>🎯</div>
             <div style={{ flex: 1 }}>
-              <p style={{ fontSize: 14, fontWeight: 800, color: '#fff' }}>Tableau des contrats</p>
-              <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>Têtes mises à prix</p>
+              <p style={{ fontSize: 14, fontWeight: 800, color: '#f5f2ee' }}>Tableau des contrats</p>
+              <p style={{ fontSize: 11, color: 'rgba(245,242,238,0.4)' }}>Têtes mises à prix</p>
             </div>
-            <span style={{ color: '#a855f7', fontSize: 18 }}>›</span>
+            <span style={{ color: ORANGE_LIGHT, fontSize: 18 }}>›</span>
           </div>
 
-          <p style={{ fontSize: 9, color: 'rgba(255,255,255,0.15)', textAlign: 'center', marginTop: 24, letterSpacing: '0.05em' }}>
+          <p style={{ fontSize: 9, color: 'rgba(245,242,238,0.15)', textAlign: 'center', marginTop: 26, letterSpacing: '0.04em' }}>
             The Hollow n'est ni responsable ni affilié à aucune transaction.
           </p>
         </div>
 
         {toast && <DarkToast msg={toast} />}
       </div>
+
+      <style>{`
+        @keyframes dwFadeUp {
+          from { opacity: 0; transform: translateY(10px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .dw-cat, .dw-row {
+          transition: transform 0.2s cubic-bezier(0.22,1,0.36,1), border-color 0.2s, background 0.2s;
+        }
+        .dw-cat:hover {
+          transform: translateY(-3px);
+          border-color: rgba(232,117,44,0.45) !important;
+          background: rgba(232,117,44,0.06) !important;
+        }
+        .dw-cat:active {
+          transform: translateY(-1px) scale(0.97);
+        }
+        .dw-row:hover {
+          border-color: rgba(232,117,44,0.35) !important;
+          background: rgba(232,117,44,0.04) !important;
+        }
+        .dw-row:active {
+          transform: scale(0.98);
+        }
+        .dw-btn-primary {
+          padding: 14px; border-radius: 14px; border: none;
+          background: linear-gradient(135deg, ${ORANGE}, #c85f1e);
+          color: #fff; font-size: 15px; font-weight: 800;
+          cursor: pointer; font-family: inherit;
+          box-shadow: 0 6px 20px rgba(232,117,44,0.3);
+          transition: transform 0.15s, box-shadow 0.15s;
+        }
+        .dw-btn-primary:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 8px 26px rgba(232,117,44,0.4);
+        }
+        .dw-btn-primary:active {
+          transform: translateY(0) scale(0.98);
+        }
+      `}</style>
     </div>
   )
 }
@@ -473,9 +516,9 @@ function DarkToast({ msg }) {
   return (
     <div style={{
       position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)',
-      background: '#1a0f26', border: '1px solid rgba(168,85,247,0.3)',
+      background: '#1a1108', border: `1px solid ${ORANGE_DIM}`,
       borderRadius: 14, padding: '10px 18px',
-      fontSize: 13, fontWeight: 700, color: '#fff',
+      fontSize: 13, fontWeight: 700, color: '#f5f2ee',
       zIndex: 200, boxShadow: '0 4px 20px rgba(0,0,0,0.6)',
       whiteSpace: 'nowrap',
     }}>{msg}</div>
