@@ -88,19 +88,21 @@ export default function App() {
     localStorage.removeItem('rp_mode')
   }, [])
 
-  function onZoneTouchStart(e) {
+  function onZoneDown(e) {
     if (currentScreen === 'home') return
-    touchStartY.current = e.touches[0].clientY
+    touchStartY.current = e.clientY
     setDragging(true)
+    e.currentTarget.setPointerCapture?.(e.pointerId)
   }
 
-  function onZoneTouchMove(e) {
+  function onZoneMove(e) {
     if (touchStartY.current === null) return
-    const delta = touchStartY.current - e.touches[0].clientY
+    e.preventDefault()
+    const delta = touchStartY.current - e.clientY
     if (delta > 0) setDragY(delta)
   }
 
-  function onZoneTouchEnd() {
+  function onZoneUp() {
     if (touchStartY.current === null) return
     touchStartY.current = null
 
@@ -161,6 +163,8 @@ export default function App() {
       opacity: liveOpacity,
       transformOrigin: 'center bottom',
       transition: dragging ? 'none' : 'transform 0.32s cubic-bezier(0.22,1,0.36,1), opacity 0.32s ease',
+      userSelect: dragging ? 'none' : 'auto',
+      WebkitUserSelect: dragging ? 'none' : 'auto',
       '--accent':        phoneTheme?.color ?? '#b96eff',
       '--grad':          phoneTheme ? `linear-gradient(135deg, ${phoneTheme.color}, #7b9fff)` : 'linear-gradient(135deg, #b96eff, #7b9fff)',
       '--phone-bg':      phoneTheme?.bg ?? '#080808',
@@ -184,20 +188,23 @@ export default function App() {
       {/* Zone de geste — tout en bas de l'écran, comme la barre d'accueil iOS */}
       {currentScreen !== 'home' && (
         <div
-          onTouchStart={onZoneTouchStart}
-          onTouchMove={onZoneTouchMove}
-          onTouchEnd={onZoneTouchEnd}
+          onPointerDown={onZoneDown}
+          onPointerMove={onZoneMove}
+          onPointerUp={onZoneUp}
+          onPointerCancel={onZoneUp}
           style={{
             position: 'absolute', bottom: 0, left: '50%', transform: 'translateX(-50%)',
             width: 140, height: 22, zIndex: 999,
             display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
             paddingBottom: 7, cursor: 'grab', touchAction: 'none',
+            userSelect: 'none', WebkitUserSelect: 'none',
           }}
         >
           <div style={{
             width: 100, height: 4, borderRadius: 3,
             background: dragging ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.28)',
             transition: dragging ? 'none' : 'background 0.2s',
+            pointerEvents: 'none',
           }} />
         </div>
       )}
