@@ -9,76 +9,58 @@ const MAP_STYLE = 'mapbox://styles/mapbox/outdoors-v12'
 // Centre : Phoenix, Arizona
 const PHOENIX = { lat: 33.4484, lng: -112.0740 }
 
-// 5 quartiers de Phoenix, chacun associé à une des 5 catégories RP
+// 4 grands quartiers fictifs de Phoenix RP, chacun avec sa propre identité
 const NEIGHBORHOODS = [
   {
-    id: 'downtown',
-    name: 'Downtown Phoenix',
-    category: 'gouvernance', // Mairie, tribunal du comté, administration
+    id: 'ember-district',
+    name: 'Ember District',
+    category: 'gouvernance', // Le cœur administratif et financier de la ville
     color: '#7a1024',
-    // Bornes : 7th Ave (ouest) · 7th St (est) · McDowell Rd (nord) · I-10 (sud)
     coords: [
-      [-112.0839, 33.4696],
-      [-112.0629, 33.4696],
-      [-112.0629, 33.4409],
-      [-112.0839, 33.4409],
-      [-112.0839, 33.4696],
+      [-112.1000, 33.5000],
+      [-112.0600, 33.5000],
+      [-112.0600, 33.4600],
+      [-112.1000, 33.4600],
+      [-112.1000, 33.5000],
     ],
   },
   {
-    id: 'midtown',
-    name: 'Midtown Phoenix',
-    category: 'travail', // Corridor de bureaux le long de Central Ave
-    color: '#f59e0b',
-    // Bornes : 3rd Ave (ouest) · 3rd St (est) · McDowell Rd (sud) · Camelback Rd (nord)
-    coords: [
-      [-112.0780, 33.5093],
-      [-112.0700, 33.5093],
-      [-112.0700, 33.4696],
-      [-112.0780, 33.4696],
-      [-112.0780, 33.5093],
-    ],
-  },
-  {
-    id: 'roosevelt-row',
-    name: 'Roosevelt Row',
-    category: 'bar', // Quartier des arts, bars et vie nocturne
+    id: 'sundown-strip',
+    name: 'Sundown Strip',
+    category: 'bar', // Le quartier de la vie nocturne et des divertissements
     color: '#c9963f',
-    // Bornes : Central Ave (ouest) · 7th St (est) · McKinley St (sud) · McDowell Rd (nord)
     coords: [
-      [-112.0740, 33.4620],
-      [-112.0629, 33.4620],
-      [-112.0629, 33.4550],
-      [-112.0740, 33.4550],
-      [-112.0740, 33.4620],
+      [-112.0600, 33.4800],
+      [-112.0200, 33.4800],
+      [-112.0200, 33.4400],
+      [-112.0600, 33.4400],
+      [-112.0600, 33.4800],
     ],
   },
   {
-    id: 'willo',
-    name: 'Willo Historic District',
-    category: 'domicile', // Quartier résidentiel historique
-    color: '#4dd9ff',
-    // Bornes : 7th Ave (ouest) · 3rd Ave (est) · McDowell Rd (sud) · Thomas Rd (nord)
-    coords: [
-      [-112.0839, 33.4790],
-      [-112.0730, 33.4790],
-      [-112.0730, 33.4696],
-      [-112.0839, 33.4696],
-      [-112.0839, 33.4790],
-    ],
-  },
-  {
-    id: 'biltmore',
-    name: 'Biltmore District',
-    category: 'commerce', // Centre commercial haut de gamme
+    id: 'ashland-row',
+    name: 'Ashland Row',
+    category: 'commerce', // La zone commerciale et industrielle
     color: '#22c55e',
-    // Bornes approximatives : 24th St (ouest) · 32nd St (est) · Camelback Rd (sud) · Highland Ave (nord)
     coords: [
-      [-112.0300, 33.5120],
-      [-112.0100, 33.5120],
-      [-112.0100, 33.5050],
-      [-112.0300, 33.5050],
-      [-112.0300, 33.5120],
+      [-112.1000, 33.4400],
+      [-112.0600, 33.4400],
+      [-112.0600, 33.4000],
+      [-112.1000, 33.4000],
+      [-112.1000, 33.4400],
+    ],
+  },
+  {
+    id: 'willow-hollow',
+    name: 'Willow Hollow',
+    category: 'domicile', // Le grand quartier résidentiel
+    color: '#4dd9ff',
+    coords: [
+      [-112.1400, 33.4600],
+      [-112.1000, 33.4600],
+      [-112.1000, 33.4200],
+      [-112.1400, 33.4200],
+      [-112.1400, 33.4600],
     ],
   },
 ]
@@ -115,7 +97,7 @@ export default function MapScreen({ onBack }) {
   const [filterSearch, setFilterSearch]        = useState('')
   const [mineOnly, setMineOnly]                = useState(false)
   const [activeCats, setActiveCats]            = useState(() => new Set(FILTER_CATEGORIES))
-  const [showNeighborhoods, setShowNeighborhoods] = useState(true)
+  const [activeNeighborhoods, setActiveNeighborhoods] = useState(() => new Set(NEIGHBORHOODS.map(n => n.id)))
   const [pendingCoords, setPendingCoords] = useState(null)
   const [loading, setLoading]         = useState(true)
   const [infoPopup, setInfoPopup]               = useState(null)
@@ -227,7 +209,7 @@ export default function MapScreen({ onBack }) {
           type: 'FeatureCollection',
           features: NEIGHBORHOODS.map(n => ({
             type: 'Feature',
-            properties: { name: n.name, color: n.color },
+            properties: { id: n.id, name: n.name, color: n.color },
             geometry: { type: 'Polygon', coordinates: [n.coords] },
           })),
         },
@@ -359,15 +341,30 @@ export default function MapScreen({ onBack }) {
     updateLocationMarkers(applyFilter(locations))
   }, [activeCats, mineOnly, filterSearch, locations])
 
-  // Affiche/masque les quartiers sur la carte
+  // Affiche uniquement les quartiers sélectionnés individuellement
   useEffect(() => {
     const map = mapRef.current
     if (!map || !map.getLayer('neighborhood-fill')) return
-    const visibility = showNeighborhoods ? 'visible' : 'none'
-    map.setLayoutProperty('neighborhood-fill', 'visibility', visibility)
-    map.setLayoutProperty('neighborhood-line', 'visibility', visibility)
-    map.setLayoutProperty('neighborhood-label', 'visibility', visibility)
-  }, [showNeighborhoods, loading])
+    const ids = Array.from(activeNeighborhoods)
+    const filterExpr = ['in', ['get', 'id'], ['literal', ids]]
+    map.setFilter('neighborhood-fill', filterExpr)
+    map.setFilter('neighborhood-line', filterExpr)
+    map.setFilter('neighborhood-label', filterExpr)
+  }, [activeNeighborhoods, loading])
+
+  function toggleNeighborhood(id) {
+    setActiveNeighborhoods(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  function toggleAllNeighborhoods() {
+    setActiveNeighborhoods(prev =>
+      prev.size === NEIGHBORHOODS.length ? new Set() : new Set(NEIGHBORHOODS.map(n => n.id))
+    )
+  }
 
   function toggleCategory(catId) {
     setActiveCats(prev => {
@@ -831,30 +828,24 @@ export default function MapScreen({ onBack }) {
                 {/* Quartiers */}
                 <FilterSectionTitle label="Quartiers" />
                 <FilterRow
-                  icon="🏘️"
-                  label="Afficher les quartiers"
-                  checked={showNeighborhoods}
-                  onChange={() => setShowNeighborhoods(v => !v)}
+                  label="TOUS LES QUARTIERS"
+                  bold
+                  checked={activeNeighborhoods.size === NEIGHBORHOODS.length}
+                  onChange={toggleAllNeighborhoods}
                 />
-                {showNeighborhoods && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '4px 4px 0 30px' }}>
-                    {NEIGHBORHOODS.map(n => {
-                      const cat = CATEGORIES.find(c => c.id === n.category)
-                      return (
-                        <span key={n.id} style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 5,
-                          fontSize: 10, color: 'var(--t3)',
-                          background: 'var(--bg2)', border: '1px solid var(--border)',
-                          borderRadius: 8, padding: '3px 8px',
-                        }}>
-                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: n.color, flexShrink: 0 }} />
-                          {n.name}
-                          {cat && <span style={{ fontSize: 9, opacity: 0.6 }}>{cat.icon}</span>}
-                        </span>
-                      )
-                    })}
-                  </div>
-                )}
+                {NEIGHBORHOODS.map(n => {
+                  const cat = CATEGORIES.find(c => c.id === n.category)
+                  return (
+                    <FilterRow
+                      key={n.id}
+                      icon={cat?.icon ?? '📍'}
+                      label={n.name}
+                      checked={activeNeighborhoods.has(n.id)}
+                      onChange={() => toggleNeighborhood(n.id)}
+                      dotColor={n.color}
+                    />
+                  )
+                })}
               </div>
 
               {/* Fermer */}
@@ -1575,7 +1566,7 @@ function FilterSectionTitle({ label }) {
 }
 
 // Ligne avec toggle façon iOS
-function FilterRow({ icon, label, checked, onChange, bold }) {
+function FilterRow({ icon, label, checked, onChange, bold, dotColor }) {
   return (
     <div
       onClick={onChange}
@@ -1584,6 +1575,7 @@ function FilterRow({ icon, label, checked, onChange, bold }) {
         padding: '9px 4px', cursor: 'pointer',
       }}
     >
+      {dotColor && <span style={{ width: 8, height: 8, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />}
       {icon && <span style={{ fontSize: 15, width: 18, textAlign: 'center', flexShrink: 0 }}>{icon}</span>}
       <span style={{
         flex: 1, fontSize: bold ? 11 : 12.5,
