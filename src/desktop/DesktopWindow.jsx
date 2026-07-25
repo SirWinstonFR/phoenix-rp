@@ -14,12 +14,14 @@ export default function DesktopWindow({
   const dragRef = useRef(null)
   const winRef  = useRef(null)
 
-  // Forcer le resize de la carte Mapbox après maximize/restore
+  // Forcer le recalcul de la carte Mapbox (et autres contenus sensibles à la taille)
+  // à chaque changement de dimensions de la fenêtre
   useEffect(() => {
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       window.dispatchEvent(new Event('resize'))
-    }, 50)
-  }, [maximized])
+    }, 30)
+    return () => clearTimeout(timer)
+  }, [maximized, size.w, size.h])
   function onTitlebarMouseDown(e) {
     if (maximized) return
     if (e.target.closest('.window-controls')) return
@@ -132,15 +134,15 @@ export default function DesktopWindow({
       {!maximized && (
         <>
           {/* Bords */}
-          <div onMouseDown={e => startResize(e, 'n')} style={{ position: 'absolute', top: -3, left: 10, right: 10, height: 6, cursor: 'n-resize' }} />
-          <div onMouseDown={e => startResize(e, 's')} style={{ position: 'absolute', bottom: -3, left: 10, right: 10, height: 6, cursor: 's-resize' }} />
-          <div onMouseDown={e => startResize(e, 'w')} style={{ position: 'absolute', left: -3, top: 10, bottom: 10, width: 6, cursor: 'w-resize' }} />
-          <div onMouseDown={e => startResize(e, 'e')} style={{ position: 'absolute', right: -3, top: 10, bottom: 10, width: 6, cursor: 'e-resize' }} />
+          <div onMouseDown={e => startResize(e, 'n')} style={{ position: 'absolute', top: 0, left: 10, right: 10, height: 6, cursor: 'n-resize' }} />
+          <div onMouseDown={e => startResize(e, 's')} style={{ position: 'absolute', bottom: 0, left: 10, right: 10, height: 6, cursor: 's-resize' }} />
+          <div onMouseDown={e => startResize(e, 'w')} style={{ position: 'absolute', left: 0, top: 10, bottom: 10, width: 6, cursor: 'w-resize' }} />
+          <div onMouseDown={e => startResize(e, 'e')} style={{ position: 'absolute', right: 0, top: 10, bottom: 10, width: 6, cursor: 'e-resize' }} />
 
           {/* Coins */}
-          <div onMouseDown={e => startResize(e, 'nw')} style={{ position: 'absolute', top: -3, left: -3, width: 12, height: 12, cursor: 'nw-resize' }} />
-          <div onMouseDown={e => startResize(e, 'ne')} style={{ position: 'absolute', top: -3, right: -3, width: 12, height: 12, cursor: 'ne-resize' }} />
-          <div onMouseDown={e => startResize(e, 'sw')} style={{ position: 'absolute', bottom: -3, left: -3, width: 12, height: 12, cursor: 'sw-resize' }} />
+          <div onMouseDown={e => startResize(e, 'nw')} style={{ position: 'absolute', top: 0, left: 0, width: 14, height: 14, cursor: 'nw-resize' }} />
+          <div onMouseDown={e => startResize(e, 'ne')} style={{ position: 'absolute', top: 0, right: 0, width: 14, height: 14, cursor: 'ne-resize' }} />
+          <div onMouseDown={e => startResize(e, 'sw')} style={{ position: 'absolute', bottom: 0, left: 0, width: 14, height: 14, cursor: 'sw-resize' }} />
           <div
             onMouseDown={e => startResize(e, 'se')}
             style={{
