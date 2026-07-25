@@ -11,6 +11,7 @@ import CrushScreen from './screens/CrushScreen'
 import IDScreen from './screens/IDScreen'
 import StoreScreen from './screens/StoreScreen'
 import BankScreen from './screens/BankScreen'
+import DarkWebScreen from './screens/DarkWebScreen'
 
 const SCREENS = {
   home:      HomeScreen,
@@ -20,6 +21,7 @@ const SCREENS = {
   id:        IDScreen,
   store:     StoreScreen,
   bank:      BankScreen,
+  darkweb:   DarkWebScreen,
 }
 
 // Calcule les variables CSS de silhouette selon le style de châssis

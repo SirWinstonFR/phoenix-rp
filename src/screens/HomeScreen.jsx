@@ -13,6 +13,7 @@ const ALL_APPS = [
   { id: 'id',        label: 'ID Card',        icon: '🪪', bg: 'linear-gradient(135deg,#0a2a6e,#1a4aae)' },
   { id: 'store',     label: 'Store',          icon: '🛍️', bg: 'linear-gradient(135deg,#1a2e1a,#0a1f0a)' },
   { id: 'bank',      label: 'Banque',         icon: '💳', bg: 'linear-gradient(135deg,#1a1a2e,#0d0d18)' },
+  { id: 'darkweb',   label: 'The Hollow',     icon: '🧅', bg: 'linear-gradient(135deg,#1a0a2e,#0a0510)' },
   { id: 'notes',     label: 'Notes',          icon: '📝', bg: 'linear-gradient(135deg,#1f1a0a,#2a2210)' },
   { id: 'settings',  label: 'Réglages',       icon: '⚙️', bg: 'linear-gradient(135deg,#1a1a1a,#222)' },
 ]
