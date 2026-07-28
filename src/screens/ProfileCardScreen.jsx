@@ -186,11 +186,17 @@ export default function ProfileCardScreen({ onBack }) {
                         </span>
                         <span style={{ fontSize: 14, fontWeight: 800, color: def.color }}>{statValue(def.key)}</span>
                       </div>
-                      <div style={{ width: '100%', height: 12, borderRadius: 6, background: 'rgba(255,255,255,0.15)', overflow: 'hidden' }}>
-                        <div style={{
-                          height: '100%', borderRadius: 6, width: `${statValue(def.key)}%`,
-                          background: def.color, transition: 'width 0.3s ease',
-                        }} />
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        {Array.from({ length: 10 }).map((_, i) => (
+                          <div
+                            key={i}
+                            style={{
+                              width: 16, height: 14, borderRadius: 3,
+                              background: i < Math.round(statValue(def.key) / 10) ? def.color : 'rgba(255,255,255,0.12)',
+                              transition: 'background 0.2s ease',
+                            }}
+                          />
+                        ))}
                       </div>
                     </div>
                   </div>
