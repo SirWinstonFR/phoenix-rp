@@ -183,7 +183,7 @@ export default function MapScreen({ onBack }) {
       })
       console.log('Couches carte:', styleLayers.map(l => `${l.id} (${l['source-layer'] ?? '-'})`))
 
-      // Bâtiments en 3D
+      // Bâtiments en 3D — dégradé vertical + variation de teinte selon la hauteur
       const layers = map.getStyle().layers
       const labelLayerId = layers.find(l => l.type === 'symbol' && l.layout['text-field'])?.id
 
@@ -193,12 +193,22 @@ export default function MapScreen({ onBack }) {
         'source-layer': 'building',
         filter: ['==', 'extrude', 'true'],
         type: 'fill-extrusion',
-        minzoom: 14,
+        minzoom: 13,
         paint: {
-          'fill-extrusion-color': '#3a2a3e',
+          // Bâtiments bas plus sombres, immeubles hauts plus clairs — donne du relief visuel
+          'fill-extrusion-color': [
+            'interpolate', ['linear'], ['get', 'height'],
+            0,   '#2a1f33',
+            30,  '#3a2a45',
+            80,  '#4a3557',
+            150, '#6248a0',
+          ],
           'fill-extrusion-height': ['get', 'height'],
           'fill-extrusion-base': ['get', 'min_height'],
-          'fill-extrusion-opacity': 0.85,
+          'fill-extrusion-opacity': 0.92,
+          'fill-extrusion-vertical-gradient': true,
+          'fill-extrusion-ambient-occlusion-intensity': 0.3,
+          'fill-extrusion-ambient-occlusion-radius': 3,
         },
       }, labelLayerId)
 
@@ -221,7 +231,20 @@ export default function MapScreen({ onBack }) {
         source: 'neighborhoods',
         paint: {
           'fill-color': ['get', 'color'],
-          'fill-opacity': 0.12,
+          'fill-opacity': 0.26,
+        },
+      })
+
+      // Halo large et doux sous le contour, pour un effet de "lueur" qui ressort davantage
+      map.addLayer({
+        id: 'neighborhood-line-glow',
+        type: 'line',
+        source: 'neighborhoods',
+        paint: {
+          'line-color': ['get', 'color'],
+          'line-width': 8,
+          'line-opacity': 0.18,
+          'line-blur': 4,
         },
       })
 
@@ -231,8 +254,9 @@ export default function MapScreen({ onBack }) {
         source: 'neighborhoods',
         paint: {
           'line-color': ['get', 'color'],
-          'line-width': 2,
-          'line-dasharray': [2, 1.5],
+          'line-width': 3,
+          'line-opacity': 0.95,
+          'line-dasharray': [2, 1.3],
         },
       })
 
@@ -242,14 +266,14 @@ export default function MapScreen({ onBack }) {
         source: 'neighborhoods',
         layout: {
           'text-field': ['get', 'name'],
-          'text-size': 13,
+          'text-size': 15,
           'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
           'symbol-placement': 'point',
         },
         paint: {
           'text-color': '#ffffff',
-          'text-halo-color': 'rgba(0,0,0,0.6)',
-          'text-halo-width': 1.5,
+          'text-halo-color': 'rgba(0,0,0,0.75)',
+          'text-halo-width': 2,
         },
       })
 
@@ -348,6 +372,7 @@ export default function MapScreen({ onBack }) {
     const ids = Array.from(activeNeighborhoods)
     const filterExpr = ['in', ['get', 'id'], ['literal', ids]]
     map.setFilter('neighborhood-fill', filterExpr)
+    map.setFilter('neighborhood-line-glow', filterExpr)
     map.setFilter('neighborhood-line', filterExpr)
     map.setFilter('neighborhood-label', filterExpr)
   }, [activeNeighborhoods, loading])
