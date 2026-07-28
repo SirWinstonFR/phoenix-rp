@@ -1,171 +1,198 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useRef } from 'react'
+import { supabase } from '../supabase'
 import { useAuth } from '../context/AuthContext'
 import StatusBar from '../components/StatusBar'
 
-const DEFAULT_STATS = [
-  { label: 'Force',       value: 50 },
-  { label: 'Charisme',    value: 50 },
-  { label: 'Discrétion',  value: 50 },
-  { label: 'Richesse',    value: 50 },
+// Convertit les liens de page imgur.com en liens directs i.imgur.com
+const fixImgur = url => url.replace('https://imgur.com/', 'https://i.imgur.com/')
+
+const BACKGROUND_URL = fixImgur('https://imgur.com/96PHtUY.png')
+
+// Les 4 catégories fixes, dans l'ordre demandé
+const STAT_DEFS = [
+  { key: 'richesse',  label: 'Richesse',  icon: fixImgur('https://imgur.com/8ymiCIF.png'), color: '#f5c344' },
+  { key: 'legalite',  label: 'Légalité',  icon: fixImgur('https://imgur.com/8sOK8Tg.png'), color: '#e0a94a' },
+  { key: 'social',    label: 'Social',    icon: fixImgur('https://imgur.com/RG2khwT.png'), color: '#e0568f' },
+  { key: 'ascension', label: 'Ascension', icon: fixImgur('https://imgur.com/uJIB6A4.png'), color: '#4a90d9' },
 ]
+
+const DEFAULT_STATS = STAT_DEFS.map(s => ({ key: s.key, value: 50 }))
 
 export default function ProfileCardScreen({ onBack }) {
   const { profile, updateProfile } = useAuth()
   const [editing, setEditing]   = useState(false)
   const [job, setJob]           = useState(profile?.job ?? '')
-  const [stats, setStats]       = useState(profile?.stats ?? DEFAULT_STATS)
-  const [saving, setSaving]     = useState(false)
+  const [stats, setStats]       = useState(() => {
+    const saved = profile?.stats
+    if (Array.isArray(saved) && saved[0]?.key) return saved
+    return DEFAULT_STATS
+  })
+  const [saving, setSaving]       = useState(false)
   const [exporting, setExporting] = useState(false)
-  const [animKey, setAnimKey]   = useState(0) // relance l'animation des barres
-  const cardRef = useRef(null)
+  const [uploadingLogo, setUploadingLogo] = useState(false)
+  const logoInputRef = useRef()
 
-  useEffect(() => {
-    // Relance l'animation d'entrée des barres à chaque ouverture
-    const t = setTimeout(() => setAnimKey(k => k + 1), 50)
-    return () => clearTimeout(t)
-  }, [])
+  function statValue(key) {
+    return stats.find(s => s.key === key)?.value ?? 50
+  }
+
+  function updateStatValue(key, value) {
+    setStats(prev => prev.map(s => s.key === key ? { ...s, value: Number(value) } : s))
+  }
 
   async function handleSave() {
     setSaving(true)
     try {
       await updateProfile({ job: job.trim(), stats })
       setEditing(false)
-      setAnimKey(k => k + 1)
     } catch (e) {
       console.error(e)
     }
     setSaving(false)
   }
 
-  function updateStatValue(i, value) {
-    setStats(prev => prev.map((s, idx) => idx === i ? { ...s, value: Number(value) } : s))
+  async function handleLogoUpload(e) {
+    const file = e.target.files[0]
+    if (!file) return
+    setUploadingLogo(true)
+    try {
+      const ext = file.name.split('.').pop()
+      const path = `job-logos/${profile.id}.${ext}`
+      await supabase.storage.from('post-images').upload(path, file, { upsert: true })
+      const { data: urlData } = supabase.storage.from('post-images').getPublicUrl(path)
+      const url = urlData.publicUrl + '?t=' + Date.now()
+      await updateProfile({ job_logo_url: url })
+    } catch (err) {
+      console.error(err)
+    }
+    setUploadingLogo(false)
   }
 
-  function updateStatLabel(i, label) {
-    setStats(prev => prev.map((s, idx) => idx === i ? { ...s, label } : s))
-  }
-
-  // ── Export en image PNG via canvas ──
+  // ── Export en image PNG ──
   async function exportCard() {
     setExporting(true)
     try {
-      const W = 600, H = 800
+      const W = 800, H = 480
       const canvas = document.createElement('canvas')
       canvas.width = W
       canvas.height = H
       const ctx = canvas.getContext('2d')
 
-      // Fond dégradé
-      const bg = ctx.createLinearGradient(0, 0, 0, H)
-      bg.addColorStop(0, '#12081c')
-      bg.addColorStop(1, '#050208')
-      ctx.fillStyle = bg
+      // Fond
+      try {
+        const bg = await loadImg(BACKGROUND_URL)
+        const scale = Math.max(W / bg.width, H / bg.height)
+        const dw = bg.width * scale, dh = bg.height * scale
+        ctx.drawImage(bg, (W - dw) / 2, (H - dh) / 2, dw, dh)
+      } catch {
+        ctx.fillStyle = '#1a1a1a'
+        ctx.fillRect(0, 0, W, H)
+      }
+
+      // Voile sombre pour la lisibilité
+      const overlay = ctx.createLinearGradient(0, 0, W, H * 0.7)
+      overlay.addColorStop(0, 'rgba(0,0,0,0.55)')
+      overlay.addColorStop(0.5, 'rgba(0,0,0,0.15)')
+      overlay.addColorStop(1, 'rgba(0,0,0,0.05)')
+      ctx.fillStyle = overlay
       ctx.fillRect(0, 0, W, H)
+      ctx.fillStyle = 'rgba(0,0,0,0.35)'
+      ctx.fillRect(0, H * 0.6, W, H * 0.4)
 
-      // Halo décoratif
-      const glow = ctx.createRadialGradient(W / 2, 140, 20, W / 2, 140, 260)
-      glow.addColorStop(0, 'rgba(185,110,255,0.25)')
-      glow.addColorStop(1, 'rgba(185,110,255,0)')
-      ctx.fillStyle = glow
-      ctx.fillRect(0, 0, W, 400)
-
-      // Avatar (cercle)
-      const avatarSize = 160
-      const avatarX = W / 2
-      const avatarY = 190
+      // Avatar haut gauche
+      const avX = 90, avY = 110, avR = 70
       ctx.save()
       ctx.beginPath()
-      ctx.arc(avatarX, avatarY, avatarSize / 2, 0, Math.PI * 2)
+      ctx.arc(avX, avY, avR, 0, Math.PI * 2)
       ctx.closePath()
       ctx.clip()
-
       if (profile?.avatar_url) {
         try {
-          const img = await loadImageCrossOrigin(profile.avatar_url)
-          const scale = Math.max(avatarSize / img.width, avatarSize / img.height)
+          const img = await loadImg(profile.avatar_url)
+          const scale = Math.max((avR*2) / img.width, (avR*2) / img.height)
           const dw = img.width * scale, dh = img.height * scale
-          ctx.drawImage(img, avatarX - dw / 2, avatarY - dh / 2, dw, dh)
-        } catch {
-          drawAvatarFallback(ctx, avatarX, avatarY, avatarSize, profile)
-        }
+          ctx.drawImage(img, avX - dw/2, avY - dh/2, dw, dh)
+        } catch { drawAvatarFallback(ctx, avX, avY, avR*2, profile) }
       } else {
-        drawAvatarFallback(ctx, avatarX, avatarY, avatarSize, profile)
+        drawAvatarFallback(ctx, avX, avY, avR*2, profile)
       }
       ctx.restore()
-
-      // Anneau dégradé autour de l'avatar
-      const ringGrad = ctx.createLinearGradient(avatarX - avatarSize/2, avatarY - avatarSize/2, avatarX + avatarSize/2, avatarY + avatarSize/2)
-      ringGrad.addColorStop(0, '#b96eff')
-      ringGrad.addColorStop(1, '#7b9fff')
       ctx.beginPath()
-      ctx.arc(avatarX, avatarY, avatarSize / 2 + 4, 0, Math.PI * 2)
-      ctx.strokeStyle = ringGrad
-      ctx.lineWidth = 5
+      ctx.arc(avX, avY, avR, 0, Math.PI*2)
+      ctx.strokeStyle = 'rgba(255,255,255,0.6)'
+      ctx.lineWidth = 3
       ctx.stroke()
 
-      // Nom
-      ctx.textAlign = 'center'
-      ctx.fillStyle = '#ffffff'
-      ctx.font = 'bold 38px sans-serif'
-      ctx.fillText(profile?.username ?? 'Inconnu', W / 2, 320)
-
-      // Job
-      if (job) {
-        ctx.font = '600 20px sans-serif'
-        ctx.fillStyle = '#c9a6ff'
-        ctx.fillText(job, W / 2, 352)
-      }
-
-      // Quartier / lieu
-      if (profile?.location) {
-        ctx.font = '15px sans-serif'
-        ctx.fillStyle = 'rgba(255,255,255,0.45)'
-        ctx.fillText(`📍 ${profile.location}`, W / 2, 380)
-      }
-
+      // Texte à droite de l'avatar
+      const textX = avX + avR + 34
       ctx.textAlign = 'left'
+      ctx.fillStyle = '#ffffff'
+      ctx.font = "800 44px 'Oswald', sans-serif"
+      ctx.fillText(profile?.username ?? 'Nom du Personnage', textX, 76)
+      ctx.font = "600 26px 'Oswald', sans-serif"
+      ctx.fillStyle = 'rgba(255,255,255,0.9)'
+      ctx.fillText(job || 'Fonction', textX, 112)
+      ctx.fillStyle = 'rgba(255,255,255,0.7)'
+      ctx.fillText(profile?.location || 'Quartier', textX, 146)
 
-      // Barres de stats
-      const barX = 60
-      const barW = W - 120
-      const barH = 16
-      let barY = 440
-      const barGap = 74
+      // Logo du job/entreprise en haut à droite
+      if (profile?.job_logo_url) {
+        try {
+          const logo = await loadImg(profile.job_logo_url)
+          const lw = 110
+          const lh = (logo.height / logo.width) * lw
+          ctx.save()
+          ctx.globalAlpha = 0.95
+          ctx.drawImage(logo, W - lw - 30, 24, lw, lh)
+          ctx.restore()
+        } catch {}
+      }
 
-      stats.forEach((stat, i) => {
-        // Label + valeur
-        ctx.font = 'bold 15px sans-serif'
+      // Badges de stats, colonne gauche
+      let by = 230
+      for (const def of STAT_DEFS) {
+        const val = statValue(def.key)
+        const bx = 70
+
+        // Icône ronde
+        ctx.save()
+        ctx.beginPath()
+        ctx.arc(bx, by, 28, 0, Math.PI * 2)
+        ctx.fillStyle = def.color
+        ctx.fill()
+        try {
+          const icon = await loadImg(def.icon)
+          ctx.beginPath()
+          ctx.arc(bx, by, 25, 0, Math.PI * 2)
+          ctx.clip()
+          ctx.drawImage(icon, bx - 25, by - 25, 50, 50)
+        } catch {}
+        ctx.restore()
+        ctx.beginPath()
+        ctx.arc(bx, by, 28, 0, Math.PI*2)
+        ctx.strokeStyle = 'rgba(255,255,255,0.5)'
+        ctx.lineWidth = 2
+        ctx.stroke()
+
+        // Barre à droite de l'icône
+        const barX = bx + 46
+        const barW = 220
+        const barH = 12
+        ctx.font = "600 14px 'Oswald', sans-serif"
         ctx.fillStyle = '#fff'
-        ctx.fillText(stat.label.toUpperCase(), barX, barY - 12)
-        ctx.textAlign = 'right'
-        ctx.fillStyle = '#b96eff'
-        ctx.fillText(`${stat.value}`, barX + barW, barY - 12)
-        ctx.textAlign = 'left'
+        ctx.fillText(`${def.label.toUpperCase()}  ${val}`, barX, by - 10)
 
-        // Fond de barre
-        roundRectPath(ctx, barX, barY, barW, barH, 8)
-        ctx.fillStyle = 'rgba(255,255,255,0.08)'
+        roundRectPath(ctx, barX, by - 2, barW, barH, 6)
+        ctx.fillStyle = 'rgba(255,255,255,0.15)'
+        ctx.fill()
+        const fillW = Math.max(4, (barW * val) / 100)
+        roundRectPath(ctx, barX, by - 2, fillW, barH, 6)
+        ctx.fillStyle = def.color
         ctx.fill()
 
-        // Remplissage
-        const fillW = Math.max(6, (barW * stat.value) / 100)
-        const fillGrad = ctx.createLinearGradient(barX, 0, barX + fillW, 0)
-        fillGrad.addColorStop(0, '#b96eff')
-        fillGrad.addColorStop(1, '#7b9fff')
-        roundRectPath(ctx, barX, barY, fillW, barH, 8)
-        ctx.fillStyle = fillGrad
-        ctx.fill()
+        by += 58
+      }
 
-        barY += barGap
-      })
-
-      // Footer
-      ctx.textAlign = 'center'
-      ctx.font = '13px sans-serif'
-      ctx.fillStyle = 'rgba(255,255,255,0.25)'
-      ctx.fillText('PHOENIX RP · FICHE PERSONNAGE', W / 2, H - 30)
-
-      // Téléchargement
       canvas.toBlob(blob => {
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
@@ -183,7 +210,7 @@ export default function ProfileCardScreen({ onBack }) {
   return (
     <div className="phone">
       <StatusBar />
-      <div className="screen" style={{ background: 'radial-gradient(ellipse at 50% 0%, rgba(185,110,255,0.1), transparent 60%), var(--bg)' }}>
+      <div className="screen" style={{ background: 'var(--bg)' }}>
 
         <div className="app-header">
           <button className="icon-btn" onClick={onBack}>←</button>
@@ -193,157 +220,144 @@ export default function ProfileCardScreen({ onBack }) {
           </button>
         </div>
 
-        <div style={{ flex: 1, overflowY: 'auto', padding: '24px 20px', display: 'flex', flexDirection: 'column', gap: 24 }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-          {!editing ? (
-            <div ref={cardRef} key={animKey} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+          {/* ── Aperçu de la carte ── */}
+          <div style={{
+            position: 'relative', width: '100%', aspectRatio: '800/480',
+            borderRadius: 16, overflow: 'hidden',
+            background: `url(${BACKGROUND_URL}) center/cover, #1a1a1a`,
+            border: '1px solid var(--border)',
+          }}>
+            {/* voile */}
+            <div style={{
+              position: 'absolute', inset: 0,
+              background: 'linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.1) 45%, rgba(0,0,0,0.4) 100%)',
+            }} />
 
-              {/* Avatar animé */}
+            {/* Logo job en haut à droite */}
+            <div
+              onClick={() => editing && logoInputRef.current.click()}
+              style={{
+                position: 'absolute', top: 10, right: 10,
+                width: 46, height: 46,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: editing ? 'pointer' : 'default',
+                border: editing ? '1.5px dashed rgba(255,255,255,0.4)' : 'none',
+                borderRadius: 10,
+                background: editing ? 'rgba(0,0,0,0.3)' : 'transparent',
+              }}
+            >
+              {profile?.job_logo_url
+                ? <img src={profile.job_logo_url} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                : editing && <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.6)', textAlign: 'center' }}>{uploadingLogo ? '…' : '+ logo'}</span>
+              }
+            </div>
+            <input ref={logoInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleLogoUpload} />
+
+            {/* Avatar + texte */}
+            <div style={{ position: 'absolute', top: 14, left: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
               <div style={{
-                width: 104, height: 104, borderRadius: '50%', padding: 3,
-                background: 'linear-gradient(135deg, #b96eff, #7b9fff)',
-                boxShadow: '0 0 30px rgba(185,110,255,0.4)',
-                animation: 'cardPop 0.5s cubic-bezier(0.22,1,0.36,1) both',
+                width: 52, height: 52, borderRadius: '50%', overflow: 'hidden',
+                border: '2px solid rgba(255,255,255,0.6)', flexShrink: 0,
+                background: profile?.avatar_color ?? '#333',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 18, fontWeight: 800, color: '#fff',
               }}>
-                <div style={{
-                  width: '100%', height: '100%', borderRadius: '50%',
-                  border: '3px solid var(--bg)', overflow: 'hidden',
-                  background: profile?.avatar_color ?? '#333',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 34, fontWeight: 800, color: '#fff',
-                }}>
-                  {profile?.avatar_url
-                    ? <img src={profile.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    : profile?.initials ?? '?'
-                  }
-                </div>
+                {profile?.avatar_url
+                  ? <img src={profile.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : profile?.initials ?? '?'
+                }
               </div>
-
-              {/* Nom + job + quartier */}
-              <div style={{ textAlign: 'center', animation: 'cardFadeUp 0.5s ease 0.1s both' }}>
-                <p style={{ fontSize: 21, fontWeight: 800, color: '#fff' }}>{profile?.username ?? '—'}</p>
-                {job && <p style={{ fontSize: 13, fontWeight: 600, color: '#c9a6ff', marginTop: 2 }}>{job}</p>}
-                {profile?.location && (
-                  <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 4 }}>📍 {profile.location}</p>
-                )}
+              <div>
+                <p style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 800, fontSize: 17, color: '#fff', lineHeight: 1.15 }}>
+                  {profile?.username ?? 'Nom du Personnage'}
+                </p>
+                <p style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 600, fontSize: 11, color: 'rgba(255,255,255,0.85)' }}>
+                  {job || 'Fonction'}
+                </p>
+                <p style={{ fontFamily: "'Oswald', sans-serif", fontSize: 10, color: 'rgba(255,255,255,0.6)' }}>
+                  {profile?.location || 'Quartier'}
+                </p>
               </div>
+            </div>
 
-              {/* Barres de stats animées */}
-              <div style={{ width: '100%', marginTop: 20, display: 'flex', flexDirection: 'column', gap: 18 }}>
-                {stats.map((stat, i) => (
-                  <div key={i} style={{ animation: `cardFadeUp 0.5s ease ${0.15 + i * 0.08}s both` }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--t2)', letterSpacing: '0.05em' }}>
-                        {stat.label.toUpperCase()}
-                      </span>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)' }}>{stat.value}</span>
+            {/* Badges de stats */}
+            <div style={{ position: 'absolute', left: 12, top: 88, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {STAT_DEFS.map(def => (
+                <div key={def.key} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{
+                    width: 26, height: 26, borderRadius: '50%',
+                    background: def.color, border: '1.5px solid rgba(255,255,255,0.5)',
+                    overflow: 'hidden', flexShrink: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <img src={def.icon} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </div>
+                  <div style={{ width: 90 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                      <span style={{ fontFamily: "'Oswald', sans-serif", fontSize: 8, fontWeight: 700, color: '#fff' }}>{def.label.toUpperCase()}</span>
+                      <span style={{ fontSize: 8, fontWeight: 700, color: def.color }}>{statValue(def.key)}</span>
                     </div>
-                    <div style={{ width: '100%', height: 8, borderRadius: 6, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
-                      <div style={{
-                        height: '100%', borderRadius: 6,
-                        background: 'linear-gradient(90deg, #b96eff, #7b9fff)',
-                        width: `${stat.value}%`,
-                        animation: `barGrow 0.9s cubic-bezier(0.22,1,0.36,1) ${0.25 + i * 0.08}s both`,
-                        '--target-width': `${stat.value}%`,
-                      }} />
+                    <div style={{ width: '100%', height: 5, borderRadius: 4, background: 'rgba(255,255,255,0.2)', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${statValue(def.key)}%`, background: def.color, borderRadius: 4 }} />
                     </div>
                   </div>
-                ))}
-              </div>
-
-              {/* Bouton export */}
-              <button
-                onClick={exportCard}
-                disabled={exporting}
-                style={{
-                  marginTop: 24, width: '100%', padding: '13px',
-                  borderRadius: 14, border: 'none',
-                  background: 'linear-gradient(135deg, #b96eff, #7b9fff)',
-                  color: '#fff', fontSize: 14, fontWeight: 800,
-                  cursor: 'pointer', fontFamily: 'inherit',
-                  boxShadow: '0 8px 24px rgba(185,110,255,0.3)',
-                  animation: 'cardFadeUp 0.5s ease 0.5s both',
-                }}
-              >
-                {exporting ? 'Génération…' : '📥 Exporter en image'}
-              </button>
-              <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', textAlign: 'center' }}>
-                Télécharge une image PNG à poster où tu veux (Discord inclus).
-              </p>
+                </div>
+              ))}
             </div>
+          </div>
+
+          {!editing ? (
+            <button
+              onClick={exportCard}
+              disabled={exporting}
+              style={{
+                padding: '13px', borderRadius: 14, border: 'none',
+                background: 'linear-gradient(135deg, #b96eff, #7b9fff)',
+                color: '#fff', fontSize: 14, fontWeight: 800,
+                cursor: 'pointer', fontFamily: 'inherit',
+                boxShadow: '0 8px 24px rgba(185,110,255,0.3)',
+              }}
+            >
+              {exporting ? 'Génération…' : '📥 Exporter en image'}
+            </button>
           ) : (
-            // ── Formulaire d'édition ──
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div className="form-group">
                 <label>Fonction / Job</label>
                 <input value={job} onChange={e => setJob(e.target.value)} placeholder="ex: Barman au Sundown Strip" />
               </div>
 
-              <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 6 }}>
-                Statistiques (4 max)
-              </p>
-
-              {stats.map((stat, i) => (
-                <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <input
-                      value={stat.label}
-                      onChange={e => updateStatLabel(i, e.target.value)}
-                      placeholder="Nom de la stat"
-                      style={{
-                        flex: 1, border: '1px solid var(--border2)', borderRadius: 10,
-                        padding: '8px 12px', background: 'var(--bg3)', color: 'var(--t1)',
-                        fontSize: 12, fontFamily: 'inherit', outline: 'none',
-                      }}
-                    />
-                    <span style={{
-                      width: 40, textAlign: 'center', fontSize: 13, fontWeight: 700,
-                      color: 'var(--accent)', alignSelf: 'center',
-                    }}>{stat.value}</span>
+              {STAT_DEFS.map(def => (
+                <div key={def.key}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <img src={def.icon} alt="" style={{ width: 18, height: 18, borderRadius: '50%' }} />
+                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--t1)', flex: 1 }}>{def.label}</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: def.color }}>{statValue(def.key)}</span>
                   </div>
                   <input
-                    type="range" min="0" max="100" value={stat.value}
-                    onChange={e => updateStatValue(i, e.target.value)}
-                    style={{ width: '100%', accentColor: '#b96eff' }}
+                    type="range" min="0" max="100" value={statValue(def.key)}
+                    onChange={e => updateStatValue(def.key, e.target.value)}
+                    style={{ width: '100%', accentColor: def.color }}
                   />
                 </div>
               ))}
 
-              {saving ? null : (
-                <button onClick={handleSave} className="btn-primary" style={{ marginTop: 8 }}>
-                  Sauvegarder
-                </button>
-              )}
-              {saving && (
-                <button className="btn-primary" disabled style={{ marginTop: 8, opacity: 0.6 }}>
-                  Sauvegarde…
-                </button>
-              )}
+              <button onClick={handleSave} className="btn-primary" disabled={saving}>
+                {saving ? 'Sauvegarde…' : 'Sauvegarder'}
+              </button>
             </div>
           )}
         </div>
       </div>
-
-      <style>{`
-        @keyframes cardPop {
-          from { opacity: 0; transform: scale(0.6); }
-          to   { opacity: 1; transform: scale(1); }
-        }
-        @keyframes cardFadeUp {
-          from { opacity: 0; transform: translateY(14px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes barGrow {
-          from { width: 0% !important; }
-        }
-      `}</style>
     </div>
   )
 }
 
 function drawAvatarFallback(ctx, x, y, size, profile) {
   ctx.fillStyle = profile?.avatar_color ?? '#7c3aed'
-  ctx.fillRect(x - size / 2, y - size / 2, size, size)
+  ctx.fillRect(x - size/2, y - size/2, size, size)
   ctx.fillStyle = '#fff'
   ctx.font = `bold ${size * 0.36}px sans-serif`
   ctx.textAlign = 'center'
@@ -352,7 +366,7 @@ function drawAvatarFallback(ctx, x, y, size, profile) {
   ctx.textBaseline = 'alphabetic'
 }
 
-function loadImageCrossOrigin(src) {
+function loadImg(src) {
   return new Promise((resolve, reject) => {
     const img = new Image()
     img.crossOrigin = 'anonymous'
