@@ -97,7 +97,7 @@ export default function ProfileCardScreen({ onBack }) {
           </button>
         </div>
 
-        <div style={{ flex: 1, overflowY: 'auto' }}>
+        <div className="pc-scroll" style={{ flex: 1, overflowY: 'auto' }}>
 
           {/* ── Bannière ── */}
           <div style={{
@@ -274,6 +274,13 @@ export default function ProfileCardScreen({ onBack }) {
       </div>
 
       <style>{`
+        .pc-scroll {
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+        .pc-scroll::-webkit-scrollbar {
+          display: none;
+        }
         @keyframes cardFadeUp {
           from { opacity: 0; transform: translateY(14px); }
           to   { opacity: 1; transform: translateY(0); }
