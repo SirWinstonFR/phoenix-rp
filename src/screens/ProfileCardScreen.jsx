@@ -53,6 +53,11 @@ export default function ProfileCardScreen({ onBack }) {
     return stats.find(s => s.key === key)?.value ?? 50
   }
 
+  // Moyenne des 4 stats, ramenée sur 10 (25% de poids chacune)
+  const influenceScore = (
+    STAT_DEFS.reduce((sum, def) => sum + statValue(def.key), 0) / STAT_DEFS.length / 10
+  ).toFixed(1)
+
   function updateStatValue(key, value) {
     setStats(prev => prev.map(s => s.key === key ? { ...s, value: Number(value) } : s))
   }
@@ -119,12 +124,12 @@ export default function ProfileCardScreen({ onBack }) {
                 background: 'linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.15) 45%, rgba(0,0,0,0.5) 100%)',
               }} />
 
-              {/* Logo emploi en haut à droite */}
+              {/* Logo emploi — aligné sur les lignes Fonction/Quartier */}
               <div
                 onClick={() => editing && logoInputRef.current.click()}
                 style={{
-                  position: 'absolute', top: 24, right: 30,
-                  width: 110, height: 60,
+                  position: 'absolute', top: 90, right: 60,
+                  width: 120, height: 65,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   cursor: editing ? 'pointer' : 'default',
                   border: editing ? '2px dashed rgba(255,255,255,0.4)' : 'none',
@@ -201,6 +206,23 @@ export default function ProfileCardScreen({ onBack }) {
                     </div>
                   </div>
                 ))}
+              </div>
+
+              {/* Influence Totale */}
+              <div style={{ position: 'absolute', left: 480, top: 205 }}>
+                <p style={{
+                  fontFamily: "'Oswald', sans-serif", fontWeight: 700, fontSize: 15,
+                  color: 'rgba(255,255,255,0.55)', letterSpacing: '0.04em',
+                }}>
+                  INFLUENCE TOTALE
+                </p>
+                <p style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 800, fontSize: 46, color: '#fff', lineHeight: 1, marginTop: 6 }}>
+                  {influenceScore}
+                  <span style={{ fontSize: 20, fontWeight: 600, color: 'rgba(255,255,255,0.4)', marginLeft: 4 }}>/10</span>
+                </p>
+                <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.32)', marginTop: 8, lineHeight: 1.4 }}>
+                  Calcul : 25% de chaque valeur /100<br />pour former une note finale sur 10
+                </p>
               </div>
 
               {/* Footer */}
