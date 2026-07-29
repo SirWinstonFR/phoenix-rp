@@ -3,16 +3,9 @@ import { supabase } from '../supabase'
 import { useAuth } from '../context/AuthContext'
 import StatusBar from '../components/StatusBar'
 
-// Convertit les liens de page imgur.com en liens directs i.imgur.com
 const fixImgur = url => url.replace('https://imgur.com/', 'https://i.imgur.com/')
-
 const BACKGROUND_URL = fixImgur('https://imgur.com/96PHtUY.png')
 
-// Dimensions "réelles" de la carte — identiques à l'image générée par le bot
-const CARD_W = 800
-const CARD_H = 460
-
-// Les 4 catégories fixes, dans l'ordre demandé
 const STAT_DEFS = [
   { key: 'richesse',  label: 'Richesse',  icon: fixImgur('https://imgur.com/8ymiCIF.png'), color: '#f5c344' },
   { key: 'legalite',  label: 'Légalité',  icon: fixImgur('https://imgur.com/8sOK8Tg.png'), color: '#e0a94a' },
@@ -35,28 +28,29 @@ export default function ProfileCardScreen({ onBack }) {
   const [uploadingLogo, setUploadingLogo]  = useState(false)
   const logoInputRef = useRef()
 
-  // ── Mise à l'échelle automatique de la carte (garde toutes les proportions) ──
-  const wrapperRef = useRef(null)
-  const [scale, setScale] = useState(0.3)
-
-  useEffect(() => {
-    const el = wrapperRef.current
-    if (!el) return
-    const update = () => setScale(el.clientWidth / CARD_W)
-    update()
-    const obs = new ResizeObserver(update)
-    obs.observe(el)
-    return () => obs.disconnect()
-  }, [])
-
   function statValue(key) {
     return stats.find(s => s.key === key)?.value ?? 50
   }
 
-  // Moyenne des 4 stats, ramenée sur 10 (25% de poids chacune)
-  const influenceScore = (
-    STAT_DEFS.reduce((sum, def) => sum + statValue(def.key), 0) / STAT_DEFS.length / 10
-  ).toFixed(1)
+  const influenceTarget = STAT_DEFS.reduce((sum, def) => sum + statValue(def.key), 0) / STAT_DEFS.length / 10
+
+  // Animation "compteur" du score d'influence
+  const [animatedInfluence, setAnimatedInfluence] = useState(0)
+  useEffect(() => {
+    let frame
+    const start = performance.now()
+    const duration = 700
+    const from = 0
+    const to = influenceTarget
+    function tick(now) {
+      const t = Math.min(1, (now - start) / duration)
+      const eased = 1 - Math.pow(1 - t, 3) // ease-out cubic
+      setAnimatedInfluence(from + (to - from) * eased)
+      if (t < 1) frame = requestAnimationFrame(tick)
+    }
+    frame = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(frame)
+  }, [influenceTarget])
 
   function updateStatValue(key, value) {
     setStats(prev => prev.map(s => s.key === key ? { ...s, value: Number(value) } : s))
@@ -103,176 +97,192 @@ export default function ProfileCardScreen({ onBack }) {
           </button>
         </div>
 
-        <div style={{ flex: 1, overflowY: 'auto', padding: '14px' }}>
+        <div style={{ flex: 1, overflowY: 'auto' }}>
 
-          {/* ── Conteneur mis à l'échelle — tout garde ses proportions ── */}
-          <div
-            ref={wrapperRef}
-            style={{ width: '100%', height: CARD_H * scale, position: 'relative', overflow: 'hidden', borderRadius: 16 }}
-          >
+          {/* ── Bannière ── */}
+          <div style={{
+            position: 'relative', width: '100%', height: 160,
+            background: `url(${BACKGROUND_URL}) center/cover, #1a1a1a`,
+            flexShrink: 0,
+          }}>
             <div style={{
-              width: CARD_W, height: CARD_H,
-              transform: `scale(${scale})`, transformOrigin: 'top left',
-              position: 'relative',
-              background: `url(${BACKGROUND_URL}) center/cover, #1a1a1a`,
-              borderRadius: 16 / scale,
-              overflow: 'hidden',
+              position: 'absolute', inset: 0,
+              background: 'linear-gradient(180deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.15) 45%, rgba(0,0,0,0.55) 100%)',
+            }} />
+
+            {/* Logo emploi, discret en haut à droite */}
+            <div
+              onClick={() => editing && logoInputRef.current.click()}
+              style={{
+                position: 'absolute', top: 10, right: 10,
+                width: 44, height: 44,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: editing ? 'pointer' : 'default',
+                border: editing ? '1.5px dashed rgba(255,255,255,0.4)' : 'none',
+                borderRadius: 10,
+                background: editing ? 'rgba(0,0,0,0.35)' : 'transparent',
+                zIndex: 2,
+              }}
+            >
+              {profile?.job_logo_url
+                ? <img src={profile.job_logo_url} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                : editing && <span style={{ fontSize: 8, color: 'rgba(255,255,255,0.6)', textAlign: 'center' }}>{uploadingLogo ? '…' : '+ logo'}</span>
+              }
+            </div>
+            <input ref={logoInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleLogoUpload} />
+
+            {/* Avatar + texte */}
+            <div style={{
+              position: 'absolute', bottom: 14, left: 14, right: 60,
+              display: 'flex', alignItems: 'center', gap: 12, zIndex: 1,
             }}>
-              {/* Voile sombre */}
               <div style={{
-                position: 'absolute', inset: 0,
-                background: 'linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.15) 45%, rgba(0,0,0,0.5) 100%)',
-              }} />
-
-              {/* Logo emploi — aligné sur les lignes Fonction/Quartier */}
-              <div
-                onClick={() => editing && logoInputRef.current.click()}
-                style={{
-                  position: 'absolute', top: 90, right: 60,
-                  width: 120, height: 65,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  cursor: editing ? 'pointer' : 'default',
-                  border: editing ? '2px dashed rgba(255,255,255,0.4)' : 'none',
-                  borderRadius: 12,
-                  background: editing ? 'rgba(0,0,0,0.3)' : 'transparent',
-                  zIndex: 2,
-                }}
-              >
-                {profile?.job_logo_url
-                  ? <img src={profile.job_logo_url} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
-                  : editing && <span style={{ fontSize: 15, color: 'rgba(255,255,255,0.6)' }}>{uploadingLogo ? '…' : '+ logo'}</span>
-                }
-              </div>
-
-              {/* Avatar */}
-              <div style={{
-                position: 'absolute', left: 20, top: 40,
-                width: 140, height: 140, borderRadius: '50%', overflow: 'hidden',
-                border: '3px solid rgba(255,255,255,0.6)',
+                width: 58, height: 58, borderRadius: '50%', overflow: 'hidden',
+                border: '2px solid rgba(255,255,255,0.7)', flexShrink: 0,
                 background: profile?.avatar_color ?? '#333',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 48, fontWeight: 800, color: '#fff',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+                fontSize: 20, fontWeight: 800, color: '#fff',
+                boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
               }}>
                 {profile?.avatar_url
                   ? <img src={profile.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   : profile?.initials ?? '?'
                 }
               </div>
-
-              {/* Texte à droite de l'avatar */}
-              <div style={{ position: 'absolute', left: 194, top: 46 }}>
-                <p style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 800, fontSize: 44, color: '#fff', lineHeight: 1.05, whiteSpace: 'nowrap' }}>
+              <div style={{ minWidth: 0 }}>
+                <p style={{
+                  fontFamily: "'Oswald', sans-serif", fontWeight: 800, fontSize: 19, color: '#fff',
+                  lineHeight: 1.15, textShadow: '0 2px 6px rgba(0,0,0,0.6)',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>
                   {profile?.username ?? 'Nom du Personnage'}
                 </p>
-                <p style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 600, fontSize: 26, color: 'rgba(255,255,255,0.9)', marginTop: 4 }}>
+                <p style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 600, fontSize: 13, color: 'rgba(255,255,255,0.9)' }}>
                   {job || 'Fonction'}
                 </p>
-                <p style={{ fontFamily: "'Oswald', sans-serif", fontSize: 20, color: 'rgba(255,255,255,0.65)', marginTop: 4 }}>
+                <p style={{ fontFamily: "'Oswald', sans-serif", fontSize: 11, color: 'rgba(255,255,255,0.65)' }}>
                   {profile?.location || 'Quartier'}
                 </p>
               </div>
+            </div>
+          </div>
 
-              {/* Badges de stats — colonne gauche */}
-              <div style={{ position: 'absolute', left: 40, top: 230, display: 'flex', flexDirection: 'column', gap: 30 }}>
-                {STAT_DEFS.map(def => (
-                  <div key={def.key} style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                    <div style={{
-                      width: 56, height: 56, borderRadius: '50%',
-                      background: def.color, border: '2px solid rgba(255,255,255,0.5)',
-                      overflow: 'hidden', flexShrink: 0,
-                    }}>
-                      <img src={def.icon} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    </div>
-                    <div style={{ width: 220 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                        <span style={{ fontFamily: "'Oswald', sans-serif", fontSize: 14, fontWeight: 700, color: '#fff', letterSpacing: '0.04em' }}>
-                          {def.label.toUpperCase()}
-                        </span>
-                        <span style={{ fontSize: 14, fontWeight: 800, color: def.color }}>{statValue(def.key)}</span>
-                      </div>
-                      <div style={{ display: 'flex', gap: 4 }}>
-                        {Array.from({ length: 10 }).map((_, i) => (
-                          <div
-                            key={i}
-                            style={{
-                              width: 16, height: 14, borderRadius: 3,
-                              background: i < Math.round(statValue(def.key) / 10) ? def.color : 'rgba(255,255,255,0.12)',
-                              transition: 'background 0.2s ease',
-                            }}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                ))}
+          {/* ── Zone stats — design natif animé ── */}
+          <div style={{ padding: '20px 18px', display: 'flex', flexDirection: 'column', gap: 22 }}>
+
+            {/* Carte Influence Totale */}
+            <div style={{
+              position: 'relative', borderRadius: 20, padding: '18px 20px',
+              background: 'linear-gradient(135deg, rgba(185,110,255,0.12), rgba(123,159,255,0.05))',
+              border: '1px solid rgba(185,110,255,0.25)',
+              overflow: 'hidden',
+              animation: 'cardFadeUp 0.5s cubic-bezier(0.22,1,0.36,1) both',
+            }}>
+              <div style={{
+                position: 'absolute', top: -30, right: -30, width: 140, height: 140, borderRadius: '50%',
+                background: 'radial-gradient(circle, rgba(185,110,255,0.2), transparent 70%)',
+              }} />
+              <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.1em', position: 'relative' }}>
+                INFLUENCE TOTALE
+              </p>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 6, position: 'relative' }}>
+                <span style={{ fontSize: 44, fontWeight: 800, color: '#fff', fontFamily: "'Space Grotesk', monospace", letterSpacing: -1 }}>
+                  {animatedInfluence.toFixed(1)}
+                </span>
+                <span style={{ fontSize: 18, fontWeight: 600, color: 'var(--t3)' }}>/10</span>
               </div>
-
-              {/* Influence Totale */}
-              <div style={{ position: 'absolute', left: 480, top: 205 }}>
-                <p style={{
-                  fontFamily: "'Oswald', sans-serif", fontWeight: 700, fontSize: 15,
-                  color: 'rgba(255,255,255,0.55)', letterSpacing: '0.04em',
-                }}>
-                  INFLUENCE TOTALE
-                </p>
-                <p style={{ fontFamily: "'Oswald', sans-serif", fontWeight: 800, fontSize: 46, color: '#fff', lineHeight: 1, marginTop: 6 }}>
-                  {influenceScore}
-                  <span style={{ fontSize: 20, fontWeight: 600, color: 'rgba(255,255,255,0.4)', marginLeft: 4 }}>/10</span>
-                </p>
-                <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.32)', marginTop: 8, lineHeight: 1.4 }}>
-                  Calcul : 25% de chaque valeur /100<br />pour former une note finale sur 10
-                </p>
-              </div>
-
-              {/* Footer */}
-              <p style={{
-                position: 'absolute', bottom: 14, left: 0, right: 0, textAlign: 'center',
-                fontSize: 13, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.05em',
-              }}>
-                PHOENIX RP · FICHE PERSONNAGE
+              <p style={{ fontSize: 11, color: 'var(--t3)', marginTop: 6, lineHeight: 1.5, position: 'relative' }}>
+                Moyenne des 4 valeurs (25% chacune), ramenée sur 10.
               </p>
             </div>
 
-            <input ref={logoInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleLogoUpload} />
-          </div>
-
-          {/* ── Édition ── */}
-          {editing && (
-            <div style={{ padding: '18px 4px 4px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div className="form-group">
-                <label>Fonction / Job</label>
-                <input value={job} onChange={e => setJob(e.target.value)} placeholder="ex: Barman au Sundown Strip" />
-              </div>
-
-              {STAT_DEFS.map(def => (
-                <div key={def.key}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                    <img src={def.icon} alt="" style={{ width: 18, height: 18, borderRadius: '50%' }} />
-                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--t1)', flex: 1 }}>{def.label}</span>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: def.color }}>{statValue(def.key)}</span>
+            {/* Les 4 stats */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+              {STAT_DEFS.map((def, i) => (
+                <div key={def.key} style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  animation: `cardFadeUp 0.45s cubic-bezier(0.22,1,0.36,1) ${0.1 + i * 0.08}s both`,
+                }}>
+                  <div style={{
+                    width: 42, height: 42, borderRadius: '50%',
+                    background: def.color, border: '2px solid rgba(255,255,255,0.15)',
+                    overflow: 'hidden', flexShrink: 0,
+                    boxShadow: `0 4px 14px ${def.color}44`,
+                  }}>
+                    <img src={def.icon} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   </div>
-                  <input
-                    type="range" min="0" max="100" value={statValue(def.key)}
-                    onChange={e => updateStatValue(def.key, e.target.value)}
-                    style={{ width: '100%', accentColor: def.color }}
-                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--t1)', letterSpacing: '0.03em' }}>
+                        {def.label}
+                      </span>
+                      <span style={{ fontSize: 12, fontWeight: 800, color: def.color }}>{statValue(def.key)}</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: 3 }}>
+                      {Array.from({ length: 10 }).map((_, blockI) => (
+                        <div
+                          key={blockI}
+                          style={{
+                            flex: 1, height: 9, borderRadius: 3,
+                            background: blockI < Math.round(statValue(def.key) / 10) ? def.color : 'var(--bg3)',
+                            animation: `blockPop 0.3s cubic-bezier(0.34,1.56,0.64,1) ${0.15 + i * 0.08 + blockI * 0.025}s both`,
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
                 </div>
               ))}
-
-              <button onClick={handleSave} className="btn-primary" disabled={saving}>
-                {saving ? 'Sauvegarde…' : 'Sauvegarder'}
-              </button>
             </div>
-          )}
 
-          {!editing && (
-            <p style={{ fontSize: 11, color: 'var(--t3)', textAlign: 'center', marginTop: 12 }}>
-              Tape <b>!fiche</b> sur Discord pour recevoir cette carte en image haute résolution.
-            </p>
-          )}
+            {!editing && (
+              <p style={{ fontSize: 11, color: 'var(--t3)', textAlign: 'center', marginTop: 4 }}>
+                Tape <b>!fiche</b> sur Discord pour recevoir cette carte en image.
+              </p>
+            )}
+
+            {/* ── Édition ── */}
+            {editing && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 4 }}>
+                <div className="form-group">
+                  <label>Fonction / Job</label>
+                  <input value={job} onChange={e => setJob(e.target.value)} placeholder="ex: Barman au Sundown Strip" />
+                </div>
+
+                {STAT_DEFS.map(def => (
+                  <div key={def.key}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                      <img src={def.icon} alt="" style={{ width: 18, height: 18, borderRadius: '50%' }} />
+                      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--t1)', flex: 1 }}>{def.label}</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: def.color }}>{statValue(def.key)}</span>
+                    </div>
+                    <input
+                      type="range" min="0" max="100" value={statValue(def.key)}
+                      onChange={e => updateStatValue(def.key, e.target.value)}
+                      style={{ width: '100%', accentColor: def.color }}
+                    />
+                  </div>
+                ))}
+
+                <button onClick={handleSave} className="btn-primary" disabled={saving}>
+                  {saving ? 'Sauvegarde…' : 'Sauvegarder'}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
+
+      <style>{`
+        @keyframes cardFadeUp {
+          from { opacity: 0; transform: translateY(14px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes blockPop {
+          from { opacity: 0; transform: scaleY(0.3); }
+          to   { opacity: 1; transform: scaleY(1); }
+        }
+      `}</style>
     </div>
   )
 }
