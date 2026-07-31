@@ -10,10 +10,9 @@ export default function CharacterSelector() {
   const auth = useAuth()
   const {
     activeCharacters = [], pendingCharacters = [], selectCharacter, signOut,
-    level = 1, maxSlots = 1, canReserveNew, refreshCharacters, user, lastError,
+    level = 1, maxSlots = 1, canReserveNew, refreshCharacters,
   } = auth
   const [reserving, setReserving] = useState(false)
-  const [showDebug, setShowDebug] = useState(true)
 
   if (reserving) {
     return (
@@ -198,35 +197,6 @@ export default function CharacterSelector() {
       >
         Se déconnecter
       </button>
-
-      {/* Panneau de debug temporaire — visible directement à l'écran */}
-      {showDebug && (
-        <div style={{
-          position: 'fixed', bottom: 10, left: 10, right: 10,
-          background: 'rgba(0,0,0,0.9)', border: '1px solid rgba(255,80,80,0.4)',
-          borderRadius: 10, padding: '10px 12px', fontSize: 10,
-          fontFamily: 'monospace', color: '#0f0', zIndex: 9999,
-          maxHeight: 200, overflow: 'auto', textAlign: 'left',
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-            <b style={{ color: '#ff5050' }}>🐛 DEBUG</b>
-            <span onClick={() => setShowDebug(false)} style={{ cursor: 'pointer', color: '#888' }}>✕ fermer</span>
-          </div>
-          <div>user.id: {user?.id ?? 'AUCUN'}</div>
-          <div style={{ color: '#ffcc00' }}>Supabase URL: {import.meta.env.VITE_SUPABASE_URL}</div>
-          {lastError && (
-            <div style={{ color: '#ff5050', marginTop: 4 }}>
-              ERREUR: {JSON.stringify(lastError)}
-            </div>
-          )}
-          <div>activeCharacters.length: {activeCharacters.length}</div>
-          <div>pendingCharacters.length: {pendingCharacters.length}</div>
-          <div>level: {level} / maxSlots: {maxSlots}</div>
-          <div style={{ marginTop: 6, wordBreak: 'break-all' }}>
-            raw active: {JSON.stringify(activeCharacters.map(c => ({ id: c.id, username: c.username, auth_user_id: c.auth_user_id })))}
-          </div>
-        </div>
-      )}
 
       <style>{`
         @keyframes charFadeDown {

@@ -33,15 +33,10 @@ export function AuthProvider({ children }) {
   const [lastError, setLastError]   = useState(null)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setUser(session.user)
-        fetchCharacters(session.user)
-      } else {
-        setLoading(false)
-      }
-    })
-
+    // onAuthStateChange se déclenche déjà immédiatement avec la session en cours
+    // au moment de l'abonnement (événement INITIAL_SESSION) — appeler aussi
+    // getSession().then() en plus créait deux fetchCharacters() concurrents,
+    // et le second (parfois plus lent) pouvait écraser les bonnes données.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
         setUser(session.user)
@@ -102,9 +97,10 @@ export function AuthProvider({ children }) {
     if (error) {
       console.error('❌ Erreur fetchCharacters:', error.message, error.details, error.hint)
       setLastError(error)
-    } else {
-      setLastError(null)
+      setLoading(false)
+      return // on garde les données précédentes plutôt que de les écraser par du vide
     }
+    setLastError(null)
 
     let list = existing ?? []
     list = await ensureDiscordIdSynced(authUser, list)
