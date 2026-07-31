@@ -383,6 +383,7 @@ const labelStyle = {
 }
 
 const inputStyle = {
+  width: '100%', boxSizing: 'border-box',
   background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
   borderRadius: 11, padding: '13px 14px', color: '#f5f2ee', fontSize: 15,
   fontFamily: 'inherit', outline: 'none', transition: 'border-color 0.2s',
