@@ -45,6 +45,7 @@ export function AuthProvider({ children }) {
         setLoading(false)
         return
       }
+      alert(`DEBUG: handleSession appelé via [${source}] pour ${session.user.id}`)
       setUser(session.user)
       // Si on a déjà lancé (ou fini) la récupération pour ce même compte, on ne relance pas
       if (fetchedFor.current === session.user.id) return
