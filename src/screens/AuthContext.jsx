@@ -90,11 +90,17 @@ export function AuthProvider({ children }) {
   }
 
   async function fetchCharacters(authUser) {
-    const { data: existing } = await supabase
+    console.log('🔍 fetchCharacters — auth_user_id recherché :', authUser.id)
+
+    const { data: existing, error } = await supabase
       .from('profiles')
       .select('*')
       .eq('auth_user_id', authUser.id)
       .order('created_at', { ascending: true })
+
+    if (error) {
+      console.error('❌ Erreur fetchCharacters:', error.message, error.details, error.hint)
+    }
 
     let list = existing ?? []
     list = await ensureDiscordIdSynced(authUser, list)
