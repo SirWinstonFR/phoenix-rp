@@ -45,12 +45,10 @@ export function AuthProvider({ children }) {
         setLoading(false)
         return
       }
-      alert(`DEBUG: handleSession appelé via [${source}] pour ${session.user.id}`)
       setUser(session.user)
       // Si on a déjà lancé (ou fini) la récupération pour ce même compte, on ne relance pas
       if (fetchedFor.current === session.user.id) return
       fetchedFor.current = session.user.id
-      console.log(`🔔 Session détectée via [${source}], récupération des personnages…`)
       await fetchCharacters(session.user)
     }
 
@@ -113,8 +111,6 @@ export function AuthProvider({ children }) {
   }
 
   async function fetchCharacters(authUser) {
-    console.log('🔍 fetchCharacters — auth_user_id recherché :', authUser.id)
-
     try {
       const { data: existing, error } = await supabase
         .from('profiles')
@@ -130,7 +126,6 @@ export function AuthProvider({ children }) {
       setLastError(null)
 
       let list = existing ?? []
-      console.log('✅ Personnages reçus de Supabase :', list.length, list.map(c => c.username))
 
       list = await ensureDiscordIdSynced(authUser, list)
       setCharacters(list)
