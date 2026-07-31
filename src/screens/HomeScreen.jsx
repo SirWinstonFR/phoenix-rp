@@ -24,7 +24,7 @@ const MJ_DISCORD_ID = '804959890291294209'
 
 const STORAGE_KEY = 'rp_app_order'
 
-export default function HomeScreen({ onOpenApp, onSwitchToDesktop, phoneTheme }) {
+export default function HomeScreen({ onOpenApp, onSwitchToDesktop, onOpenWiki, phoneTheme }) {
   const { profile, signOut, characters = [], switchCharacter } = useAuth()
   const unlockedApps = profile?.unlocked_apps ?? ['messages', 'phone', 'instagrim', 'map', 'crush', 'id', 'store', 'bank', 'card']
   const isMJ = profile?.discord_id === MJ_DISCORD_ID
@@ -170,6 +170,13 @@ export default function HomeScreen({ onOpenApp, onSwitchToDesktop, phoneTheme })
               borderRadius: 10, padding: '6px 10px', fontSize: 11, fontWeight: 700,
               color: '#7b9fff', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
             }}>👥</button>
+          )}
+          {onOpenWiki && (
+            <button onClick={onOpenWiki} style={{
+              background: 'rgba(232,117,44,0.1)', border: '1px solid rgba(232,117,44,0.2)',
+              borderRadius: 10, padding: '6px 10px', fontSize: 11, fontWeight: 700,
+              color: '#f5a052', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
+            }}>❓</button>
           )}
           {onSwitchToDesktop && (
             <button onClick={onSwitchToDesktop} style={{

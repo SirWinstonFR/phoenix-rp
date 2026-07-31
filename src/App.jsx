@@ -15,6 +15,7 @@ import BankScreen from './screens/BankScreen'
 import DarkWebScreen from './screens/DarkWebScreen'
 import ProfileCardScreen from './screens/ProfileCardScreen'
 import MJDashboardScreen from './screens/MJDashboardScreen'
+import WikiPanel from './components/WikiPanel'
 
 const SCREENS = {
   home:      HomeScreen,
@@ -79,6 +80,7 @@ export default function App() {
   const { user, loading, profile, activeId, characters = [], refreshCharacters } = useAuth()
   const [currentScreen, setCurrentScreen] = useState('home')
   const [appOrigin, setAppOrigin] = useState(null) // position de l'icône tapée, pour l'effet "grandit depuis l'icône"
+  const [wikiOpen, setWikiOpen] = useState(false)
   const [mode, setMode] = useState(() => {
     return localStorage.getItem('rp_mode') ?? 'phone'
   })
@@ -169,9 +171,10 @@ export default function App() {
   const liveOpacity    = 1 - dragProgress * 0.45
 
   return (
+    <>
     <div style={{
       position: 'relative',
-      transform: `translateY(${liveTranslateY}px) scale(${liveScale})`,
+      transform: `translateY(${liveTranslateY}px) translateX(${wikiOpen ? -90 : 0}px) scale(${liveScale})`,
       opacity: liveOpacity,
       transformOrigin: 'center bottom',
       transition: dragging ? 'none' : 'transform 0.32s cubic-bezier(0.22,1,0.36,1), opacity 0.32s ease',
@@ -214,6 +217,7 @@ export default function App() {
           }}
           onBack={() => { setAppOrigin(null); setCurrentScreen('home') }}
           onSwitchToDesktop={() => setMode('desktop')}
+          onOpenWiki={() => setWikiOpen(true)}
           phoneTheme={phoneTheme}
         />
       </div>
@@ -242,5 +246,8 @@ export default function App() {
         </div>
       )}
     </div>
+
+    {wikiOpen && <WikiPanel onClose={() => setWikiOpen(false)} />}
+    </>
   )
 }

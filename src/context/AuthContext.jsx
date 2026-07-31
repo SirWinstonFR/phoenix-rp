@@ -179,7 +179,7 @@ export function AuthProvider({ children }) {
   }
 
   // Crée une nouvelle réservation de personnage (en attente de validation MJ)
-  async function reserveCharacter({ firstName, lastName, jobWish, avatarFile }) {
+  async function reserveCharacter({ firstName, lastName, jobWish, residence, avatarFile }) {
     if (!user) throw new Error('Non connecté')
     const snowflake = getSnowflake(user)
 
@@ -207,7 +207,7 @@ export function AuthProvider({ children }) {
         avatar_url:         avatarUrl,
         avatar_color:       color,
         initials:           fullName.slice(0, 2).toUpperCase(),
-        bio: '', location: '',
+        bio: '', location: residence?.trim() || '',
         character_status:   'pending',
         setup_complete:     false,
         unlocked_apps:      ['messages', 'phone', 'instagrim', 'map', 'crush', 'notes', 'settings'],

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../supabase'
 import { useAuth } from '../context/AuthContext'
+import { NEIGHBORHOODS } from '../constants/neighborhoods'
 import StatusBar from '../components/StatusBar'
 
 // Style unique : Relief
@@ -9,61 +10,6 @@ const MAP_STYLE = 'mapbox://styles/mapbox/outdoors-v12'
 // Centre : Phoenix, Arizona
 const PHOENIX = { lat: 33.4484, lng: -112.0740 }
 
-// 4 grands quartiers fictifs de Phoenix RP, chacun avec sa propre identité
-const NEIGHBORHOODS = [
-  {
-    id: 'ember-district',
-    name: 'Ember District',
-    category: 'gouvernance', // Le cœur administratif et financier de la ville
-    color: '#7a1024',
-    coords: [
-      [-112.1000, 33.5000],
-      [-112.0600, 33.5000],
-      [-112.0600, 33.4600],
-      [-112.1000, 33.4600],
-      [-112.1000, 33.5000],
-    ],
-  },
-  {
-    id: 'sundown-strip',
-    name: 'Sundown Strip',
-    category: 'bar', // Le quartier de la vie nocturne et des divertissements
-    color: '#c9963f',
-    coords: [
-      [-112.0600, 33.4800],
-      [-112.0200, 33.4800],
-      [-112.0200, 33.4400],
-      [-112.0600, 33.4400],
-      [-112.0600, 33.4800],
-    ],
-  },
-  {
-    id: 'ashland-row',
-    name: 'Ashland Row',
-    category: 'commerce', // La zone commerciale et industrielle
-    color: '#22c55e',
-    coords: [
-      [-112.1000, 33.4400],
-      [-112.0600, 33.4400],
-      [-112.0600, 33.4000],
-      [-112.1000, 33.4000],
-      [-112.1000, 33.4400],
-    ],
-  },
-  {
-    id: 'willow-hollow',
-    name: 'Willow Hollow',
-    category: 'domicile', // Le grand quartier résidentiel
-    color: '#4dd9ff',
-    coords: [
-      [-112.1400, 33.4600],
-      [-112.1000, 33.4600],
-      [-112.1000, 33.4200],
-      [-112.1400, 33.4200],
-      [-112.1400, 33.4600],
-    ],
-  },
-]
 
 // Catégories de lieux
 const CATEGORIES = [
