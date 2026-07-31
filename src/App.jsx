@@ -6,6 +6,7 @@ import InstaGrimScreen from './screens/InstaGrimScreen'
 import MapScreen from './screens/MapScreen'
 import DesktopMode from './desktop/DesktopMode'
 import CharacterSelector from './screens/CharacterSelector'
+import CharacterReservationScreen from './screens/CharacterReservationScreen'
 
 import CrushScreen from './screens/CrushScreen'
 import IDScreen from './screens/IDScreen'
@@ -13,6 +14,7 @@ import StoreScreen from './screens/StoreScreen'
 import BankScreen from './screens/BankScreen'
 import DarkWebScreen from './screens/DarkWebScreen'
 import ProfileCardScreen from './screens/ProfileCardScreen'
+import MJDashboardScreen from './screens/MJDashboardScreen'
 
 const SCREENS = {
   home:      HomeScreen,
@@ -24,6 +26,7 @@ const SCREENS = {
   bank:      BankScreen,
   darkweb:   DarkWebScreen,
   card:      ProfileCardScreen,
+  mjpanel:   MJDashboardScreen,
 }
 
 // Calcule les variables CSS de silhouette selon le style de châssis
@@ -73,7 +76,7 @@ function getFrameVars(frameStyle) {
 }
 
 export default function App() {
-  const { user, loading, profile, activeId } = useAuth()
+  const { user, loading, profile, activeId, characters, refreshCharacters } = useAuth()
   const [currentScreen, setCurrentScreen] = useState('home')
   const [appOrigin, setAppOrigin] = useState(null) // position de l'icône tapée, pour l'effet "grandit depuis l'icône"
   const [mode, setMode] = useState(() => {
@@ -140,6 +143,11 @@ export default function App() {
   }
 
   if (!user) return <PhoneLoginScreen />
+
+  // Premier personnage jamais créé → formulaire de réservation obligatoire
+  if (characters.length === 0) {
+    return <CharacterReservationScreen onDone={refreshCharacters} />
+  }
 
   // Compte connecté mais aucun personnage sélectionné (plusieurs dispo)
   if (!activeId) return <CharacterSelector />

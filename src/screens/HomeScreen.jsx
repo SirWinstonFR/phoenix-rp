@@ -17,13 +17,17 @@ const ALL_APPS = [
   { id: 'card',      label: 'Résumé',         icon: '🪄', bg: 'linear-gradient(135deg,#2a1a3e,#160a24)' },
   { id: 'notes',     label: 'Notes',          icon: '📝', bg: 'linear-gradient(135deg,#1f1a0a,#2a2210)' },
   { id: 'settings',  label: 'Réglages',       icon: '⚙️', bg: 'linear-gradient(135deg,#1a1a1a,#222)' },
+  { id: 'mjpanel',   label: 'Panel MJ',       icon: '👑', bg: 'linear-gradient(135deg,#3e2a0a,#241a05)' },
 ]
+
+const MJ_DISCORD_ID = '804959890291294209'
 
 const STORAGE_KEY = 'rp_app_order'
 
 export default function HomeScreen({ onOpenApp, onSwitchToDesktop, phoneTheme }) {
   const { profile, signOut, characters, switchCharacter } = useAuth()
   const unlockedApps = profile?.unlocked_apps ?? ['messages', 'phone', 'instagrim', 'map', 'crush', 'id', 'store', 'bank', 'card']
+  const isMJ = profile?.discord_id === MJ_DISCORD_ID
 
   const today = new Date()
   const dateStr = today.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
@@ -52,8 +56,9 @@ export default function HomeScreen({ onOpenApp, onSwitchToDesktop, phoneTheme })
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(order)) } catch {}
   }, [order])
 
-  // Trier selon l'ordre sauvegardé
-  const sortedApps = [...ALL_APPS].sort((a, b) => {
+  // Trier selon l'ordre sauvegardé — le Panel MJ est totalement invisible pour les autres
+  const visibleApps = ALL_APPS.filter(a => a.id !== 'mjpanel' || isMJ)
+  const sortedApps = [...visibleApps].sort((a, b) => {
     const ia = order.indexOf(a.id)
     const ib = order.indexOf(b.id)
     return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib)
@@ -193,7 +198,7 @@ export default function HomeScreen({ onOpenApp, onSwitchToDesktop, phoneTheme })
         {/* Grille */}
         <div className="app-grid" onClick={e => e.stopPropagation()}>
           {sortedApps.map((app, i) => {
-            const unlocked   = unlockedApps.includes(app.id)
+            const unlocked   = app.id === 'mjpanel' ? true : unlockedApps.includes(app.id)
             const isDragging = dragSrc === app.id
             const isOver     = dragOver === app.id
 

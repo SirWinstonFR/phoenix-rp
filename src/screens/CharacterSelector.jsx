@@ -1,11 +1,28 @@
+import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import Avatar from '../components/Avatar'
+import CharacterReservationScreen from './CharacterReservationScreen'
 
 const ORANGE = '#e8752c'
 const ORANGE_LIGHT = '#f5a052'
 
 export default function CharacterSelector() {
-  const { characters, selectCharacter, signOut } = useAuth()
+  const {
+    activeCharacters, pendingCharacters, selectCharacter, signOut,
+    level, maxSlots, canReserveNew, refreshCharacters,
+  } = useAuth()
+  const [reserving, setReserving] = useState(false)
+
+  if (reserving) {
+    return (
+      <CharacterReservationScreen
+        onCancel={() => setReserving(false)}
+        onDone={async () => { await refreshCharacters(); setReserving(false) }}
+      />
+    )
+  }
+
+  const totalSlotsUsed = activeCharacters.length + pendingCharacters.length
 
   return (
     <div style={{
@@ -16,8 +33,8 @@ export default function CharacterSelector() {
       `,
       display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center',
-      gap: 40, fontFamily: 'Inter, sans-serif', padding: 24,
-      overflow: 'hidden', position: 'relative',
+      gap: 32, fontFamily: 'Inter, sans-serif', padding: 24,
+      overflow: 'hidden auto', position: 'relative',
     }}>
 
       {/* En-tête */}
@@ -35,7 +52,7 @@ export default function CharacterSelector() {
             width: 6, height: 6, borderRadius: '50%',
             background: ORANGE, boxShadow: `0 0 8px ${ORANGE}`,
           }} />
-          BRIDGE TO PHOENIX · {characters.length} PERSONNAGE{characters.length > 1 ? 'S' : ''}
+          BRIDGE TO PHOENIX · NIVEAU {level} · {totalSlotsUsed}/{maxSlots} PERSONNAGE{maxSlots > 1 ? 'S' : ''}
         </div>
         <p style={{
           fontSize: 28, fontWeight: 800, letterSpacing: -0.6,
@@ -50,7 +67,7 @@ export default function CharacterSelector() {
         display: 'flex', flexWrap: 'wrap', gap: 18,
         justifyContent: 'center', maxWidth: 640,
       }}>
-        {characters.map((char, i) => (
+        {activeCharacters.map((char, i) => (
           <div
             key={char.id}
             onClick={() => selectCharacter(char.id)}
@@ -65,7 +82,6 @@ export default function CharacterSelector() {
               animation: `charCardIn 0.5s cubic-bezier(0.22,1,0.36,1) ${i * 0.08}s both`,
             }}
           >
-            {/* Avatar — un seul anneau, propre */}
             <Avatar
               profile={char}
               size={76}
@@ -80,17 +96,6 @@ export default function CharacterSelector() {
                 <p style={{ fontSize: 11, color: 'rgba(245,242,238,0.4)' }}>📍 {char.location}</p>
               ) : (
                 <p style={{ fontSize: 11, color: 'rgba(245,242,238,0.25)' }}>Phoenix, AZ</p>
-              )}
-
-              {char.bio && (
-                <p style={{
-                  fontSize: 10.5, color: 'rgba(245,242,238,0.35)', marginTop: 6,
-                  lineHeight: 1.4,
-                  display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-                  overflow: 'hidden',
-                }}>
-                  {char.bio}
-                </p>
               )}
             </div>
 
@@ -114,7 +119,69 @@ export default function CharacterSelector() {
             </div>
           </div>
         ))}
+
+        {/* Personnages en attente de validation MJ */}
+        {pendingCharacters.map((char, i) => (
+          <div
+            key={char.id}
+            style={{
+              width: 168, padding: '30px 18px 22px',
+              background: 'rgba(255,255,255,0.015)',
+              border: '1px dashed rgba(255,255,255,0.12)',
+              borderRadius: 18, cursor: 'default',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14,
+              opacity: 0.6,
+              animation: `charCardIn 0.5s cubic-bezier(0.22,1,0.36,1) ${(activeCharacters.length + i) * 0.08}s both`,
+            }}
+          >
+            <Avatar profile={char} size={76} style={{ background: 'rgba(255,255,255,0.15)', filter: 'grayscale(1)' }} />
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ fontSize: 15, fontWeight: 700, color: '#f5f2ee', marginBottom: 3 }}>{char.username}</p>
+              <p style={{ fontSize: 11, color: 'rgba(245,242,238,0.35)' }}>{char.job_wish || 'Sans préférence'}</p>
+            </div>
+            <span style={{
+              fontSize: 9, fontWeight: 800, letterSpacing: '0.06em',
+              color: '#f5a052', background: 'rgba(245,160,82,0.1)',
+              border: '1px solid rgba(245,160,82,0.25)',
+              padding: '3px 9px', borderRadius: 8,
+            }}>
+              ⏳ EN ATTENTE MJ
+            </span>
+          </div>
+        ))}
+
+        {/* Réserver un nouveau personnage */}
+        {canReserveNew && (
+          <div
+            onClick={() => setReserving(true)}
+            className="char-card"
+            style={{
+              width: 168, padding: '30px 18px 22px',
+              background: 'rgba(232,117,44,0.03)',
+              border: '1.5px dashed rgba(232,117,44,0.3)',
+              borderRadius: 18, cursor: 'pointer',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10,
+              minHeight: 190,
+              animation: `charCardIn 0.5s cubic-bezier(0.22,1,0.36,1) ${(activeCharacters.length + pendingCharacters.length) * 0.08}s both`,
+            }}
+          >
+            <div style={{
+              width: 52, height: 52, borderRadius: '50%',
+              background: 'rgba(232,117,44,0.12)', border: '1px solid rgba(232,117,44,0.3)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22,
+            }}>➕</div>
+            <p style={{ fontSize: 13, fontWeight: 700, color: ORANGE_LIGHT, textAlign: 'center' }}>
+              Réserver un<br />personnage
+            </p>
+          </div>
+        )}
       </div>
+
+      {!canReserveNew && (
+        <p style={{ fontSize: 11, color: 'rgba(245,242,238,0.3)', textAlign: 'center', maxWidth: 320 }}>
+          Atteins le niveau {nextUnlockLevel(level)} sur Discord pour débloquer un personnage supplémentaire.
+        </p>
+      )}
 
       <button
         onClick={signOut}
@@ -157,4 +224,9 @@ export default function CharacterSelector() {
       `}</style>
     </div>
   )
+}
+
+function nextUnlockLevel(currentLevel) {
+  const tiers = [5, 10, 15, 20]
+  return tiers.find(l => l > currentLevel) ?? currentLevel + 5
 }
