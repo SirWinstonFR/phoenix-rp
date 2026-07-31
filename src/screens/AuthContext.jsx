@@ -30,6 +30,7 @@ export function AuthProvider({ children }) {
   const [xp, setXp]                 = useState(0)
   const [level, setLevel]           = useState(1)
   const [loading, setLoading]       = useState(true)
+  const [lastError, setLastError]   = useState(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -100,6 +101,9 @@ export function AuthProvider({ children }) {
 
     if (error) {
       console.error('❌ Erreur fetchCharacters:', error.message, error.details, error.hint)
+      setLastError(error)
+    } else {
+      setLastError(null)
     }
 
     let list = existing ?? []
@@ -208,6 +212,7 @@ export function AuthProvider({ children }) {
       pendingCharacters,
       activeId,
       loading,
+      lastError,
       xp,
       level,
       maxSlots,

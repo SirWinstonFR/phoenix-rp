@@ -10,7 +10,7 @@ export default function CharacterSelector() {
   const auth = useAuth()
   const {
     activeCharacters = [], pendingCharacters = [], selectCharacter, signOut,
-    level = 1, maxSlots = 1, canReserveNew, refreshCharacters, user,
+    level = 1, maxSlots = 1, canReserveNew, refreshCharacters, user, lastError,
   } = auth
   const [reserving, setReserving] = useState(false)
   const [showDebug, setShowDebug] = useState(true)
@@ -213,6 +213,12 @@ export default function CharacterSelector() {
             <span onClick={() => setShowDebug(false)} style={{ cursor: 'pointer', color: '#888' }}>✕ fermer</span>
           </div>
           <div>user.id: {user?.id ?? 'AUCUN'}</div>
+          <div style={{ color: '#ffcc00' }}>Supabase URL: {import.meta.env.VITE_SUPABASE_URL}</div>
+          {lastError && (
+            <div style={{ color: '#ff5050', marginTop: 4 }}>
+              ERREUR: {JSON.stringify(lastError)}
+            </div>
+          )}
           <div>activeCharacters.length: {activeCharacters.length}</div>
           <div>pendingCharacters.length: {pendingCharacters.length}</div>
           <div>level: {level} / maxSlots: {maxSlots}</div>
