@@ -33,23 +33,40 @@ export function AuthProvider({ children }) {
   const [lastError, setLastError]   = useState(null)
 
   useEffect(() => {
-    // onAuthStateChange se déclenche déjà immédiatement avec la session en cours
-    // au moment de l'abonnement (événement INITIAL_SESSION) — appeler aussi
-    // getSession().then() en plus créait deux fetchCharacters() concurrents,
-    // et le second (parfois plus lent) pouvait écraser les bonnes données.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session?.user) {
-        setUser(session.user)
-        await fetchCharacters(session.user)
-      } else {
+    let cancelled = false
+    const fetchedFor = { current: null } // évite de relancer deux fois pour le même compte
+
+    async function handleSession(session, source) {
+      if (cancelled) return
+      if (!session?.user) {
         setUser(null)
         setCharacters([])
         setActiveId(null)
         setLoading(false)
+        return
       }
+      setUser(session.user)
+      // Si on a déjà lancé (ou fini) la récupération pour ce même compte, on ne relance pas
+      if (fetchedFor.current === session.user.id) return
+      fetchedFor.current = session.user.id
+      console.log(`🔔 Session détectée via [${source}], récupération des personnages…`)
+      await fetchCharacters(session.user)
+    }
+
+    // Filet n°1 : lecture directe de la session déjà en cours (fiable au tout premier chargement)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      handleSession(session, 'getSession')
     })
 
-    return () => subscription.unsubscribe()
+    // Filet n°2 : écoute les changements futurs (connexion, déconnexion, refresh de token…)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      handleSession(session, 'onAuthStateChange')
+    })
+
+    return () => {
+      cancelled = true
+      subscription.unsubscribe()
+    }
   }, [])
 
   function getSnowflake(authUser) {
