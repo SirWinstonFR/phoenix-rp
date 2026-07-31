@@ -5,110 +5,160 @@ const AuthContext = createContext(null)
 
 const ACTIVE_CHAR_KEY = 'rp_active_character'
 
+// Mêmes paliers que côté bot — à garder synchronisés
+const LEVEL_XP_STEP = 50
+const CHARACTER_SLOT_UNLOCKS = [
+  { level: 1,  slots: 1 },
+  { level: 5,  slots: 2 },
+  { level: 10, slots: 3 },
+  { level: 15, slots: 4 },
+  { level: 20, slots: 5 },
+]
+
+function slotsForLevel(level) {
+  let slots = 1
+  for (const tier of CHARACTER_SLOT_UNLOCKS) {
+    if (level >= tier.level) slots = tier.slots
+  }
+  return slots
+}
+
 export function AuthProvider({ children }) {
-  const [user, setUser]           = useState(null)
-  const [characters, setCharacters] = useState([])       // tous les persos du compte
-  const [activeId, setActiveId]     = useState(null)      // id du perso actif
+  const [user, setUser]             = useState(null)
+  const [characters, setCharacters] = useState([])   // tous les persos du compte (actifs + en attente)
+  const [activeId, setActiveId]     = useState(null)
+  const [xp, setXp]                 = useState(0)
+  const [level, setLevel]           = useState(1)
   const [loading, setLoading]       = useState(true)
+  const [lastError, setLastError]   = useState(null)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setUser(session.user)
-        fetchCharacters(session.user)
-      } else {
-        setLoading(false)
-      }
-    })
+    let cancelled = false
+    const fetchedFor = { current: null } // évite de relancer deux fois pour le même compte
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session?.user) {
-        setUser(session.user)
-        await fetchCharacters(session.user)
-      } else {
+    async function handleSession(session, source) {
+      if (cancelled) return
+      if (!session?.user) {
         setUser(null)
         setCharacters([])
         setActiveId(null)
         setLoading(false)
+        return
       }
+      alert(`DEBUG: handleSession appelé via [${source}] pour ${session.user.id}`)
+      setUser(session.user)
+      // Si on a déjà lancé (ou fini) la récupération pour ce même compte, on ne relance pas
+      if (fetchedFor.current === session.user.id) return
+      fetchedFor.current = session.user.id
+      console.log(`🔔 Session détectée via [${source}], récupération des personnages…`)
+      await fetchCharacters(session.user)
+    }
+
+    // Filet n°1 : lecture directe de la session déjà en cours (fiable au tout premier chargement)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      handleSession(session, 'getSession')
     })
 
-    return () => subscription.unsubscribe()
+    // Filet n°2 : écoute les changements futurs (connexion, déconnexion, refresh de token…)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      handleSession(session, 'onAuthStateChange')
+    })
+
+    return () => {
+      cancelled = true
+      subscription.unsubscribe()
+    }
   }, [])
 
-  async function fetchCharacters(authUser) {
-    const { data: existing } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('auth_user_id', authUser.id)
-      .order('created_at', { ascending: true })
-
-    let list = existing ?? []
-
-    // Aucun perso encore → on crée le premier automatiquement depuis Discord
-    if (list.length === 0) {
-      const created = await createFirstCharacter(authUser)
-      if (created) list = [created]
-    }
-
-    setCharacters(list)
-
-    // Restaurer le perso actif choisi précédemment (session navigateur)
-    const savedId = localStorage.getItem(ACTIVE_CHAR_KEY)
-    const savedStillValid = list.find(c => c.id === savedId)
-
-    if (savedStillValid) {
-      setActiveId(savedId)
-    } else if (list.length === 1) {
-      // Un seul perso → sélection automatique, pas besoin de choisir
-      setActiveId(list[0].id)
-      localStorage.setItem(ACTIVE_CHAR_KEY, list[0].id)
-    } else {
-      // Plusieurs persos, aucun choisi → l'écran de sélection s'affichera
-      setActiveId(null)
-    }
-
-    setLoading(false)
+  function getSnowflake(authUser) {
+    return (
+      authUser.user_metadata?.provider_id ||
+      authUser.identities?.[0]?.id ||
+      authUser.user_metadata?.sub ||
+      null
+    )
   }
 
-  async function createFirstCharacter(authUser) {
-    const discordUsername =
-      authUser.user_metadata?.full_name ||
-      authUser.user_metadata?.name ||
-      authUser.user_metadata?.global_name ||
-      authUser.email?.split('@')[0] ||
-      'joueur'
+  // Le vrai ID Discord est posé sur TOUS les persos du compte
+  async function ensureDiscordIdSynced(authUser, charList) {
+    const snowflake = getSnowflake(authUser)
+    if (!snowflake) return charList
 
-    const discordAvatar =
-      authUser.user_metadata?.avatar_url ||
-      authUser.user_metadata?.picture ||
-      null
-
-    const cleanUsername = discordUsername.replace(/[^a-zA-Z0-9_.\- ]/g, '').slice(0, 30).trim()
-    const initials = cleanUsername.slice(0, 2).toUpperCase()
-    const color = randomColor()
-
-    const { data: newProfile, error } = await supabase
-      .from('profiles')
-      .insert({
-        auth_user_id:   authUser.id,
-        username:       cleanUsername,
-        bio:            '',
-        location:       '',
-        avatar_color:   color,
-        avatar_url:     discordAvatar,
-        initials:       initials,
-        setup_complete: false,
-        unlocked_apps:  ['messages', 'phone', 'instagrim', 'map', 'crush', 'notes', 'settings'],
-      })
-      .select()
-      .single()
-
-    if (error) {
-      console.error('Erreur création personnage:', error)
-      return null
+    const missing = charList.filter(c => c.discord_id !== snowflake)
+    if (missing.length > 0) {
+      try {
+        const { error } = await supabase.from('profiles').update({ discord_id: snowflake }).eq('auth_user_id', authUser.id)
+        if (error) console.error('⚠️ Échec sync discord_id (non bloquant):', error.message)
+      } catch (e) {
+        console.error('⚠️ Exception sync discord_id (non bloquant):', e.message)
+      }
     }
-    return newProfile
+    return charList.map(c => ({ ...c, discord_id: snowflake }))
+  }
+
+  async function fetchXP(authUser) {
+    try {
+      const snowflake = getSnowflake(authUser)
+      if (!snowflake) return
+      const { data } = await supabase
+        .from('discord_xp')
+        .select('xp, level')
+        .eq('discord_id', snowflake)
+        .maybeSingle()
+      setXp(data?.xp ?? 0)
+      setLevel(data?.level ?? 1)
+    } catch (e) {
+      console.error('⚠️ Erreur fetchXP (non bloquant):', e.message)
+    }
+  }
+
+  async function fetchCharacters(authUser) {
+    console.log('🔍 fetchCharacters — auth_user_id recherché :', authUser.id)
+
+    try {
+      const { data: existing, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('auth_user_id', authUser.id)
+        .order('created_at', { ascending: true })
+
+      if (error) {
+        console.error('❌ Erreur fetchCharacters:', error.message, error.details, error.hint)
+        setLastError(error)
+        return // on garde les données précédentes plutôt que de les écraser par du vide
+      }
+      setLastError(null)
+
+      let list = existing ?? []
+      console.log('✅ Personnages reçus de Supabase :', list.length, list.map(c => c.username))
+
+      list = await ensureDiscordIdSynced(authUser, list)
+      setCharacters(list)
+      await fetchXP(authUser)
+
+      // Seuls les persos ACTIFS (validés par le MJ) peuvent être sélectionnés/joués
+      const playable = list.filter(c => (c.character_status ?? 'active') === 'active')
+
+      const savedId = localStorage.getItem(ACTIVE_CHAR_KEY)
+      const savedStillValid = playable.find(c => c.id === savedId)
+
+      if (savedStillValid) {
+        setActiveId(savedId)
+      } else if (playable.length === 1) {
+        setActiveId(playable[0].id)
+        localStorage.setItem(ACTIVE_CHAR_KEY, playable[0].id)
+      } else {
+        setActiveId(null)
+      }
+    } catch (e) {
+      // Filet de sécurité ultime : si quoi que ce soit plante ici, on le voit
+      // au lieu de rester bloqué silencieusement avec une liste vide.
+      console.error('💥 Exception inattendue dans fetchCharacters:', e)
+      setLastError({ message: e.message, stack: e.stack })
+    } finally {
+      // Toujours exécuté, même en cas d'erreur — évite un chargement bloqué à l'infini
+      setLoading(false)
+    }
   }
 
   function selectCharacter(id) {
@@ -117,7 +167,6 @@ export function AuthProvider({ children }) {
   }
 
   function switchCharacter() {
-    // Revenir à l'écran de sélection sans se déconnecter de Discord
     setActiveId(null)
     localStorage.removeItem(ACTIVE_CHAR_KEY)
   }
@@ -129,12 +178,51 @@ export function AuthProvider({ children }) {
 
   async function updateProfile(updates) {
     if (!activeId) throw new Error('Aucun personnage actif')
-    const { error } = await supabase
-      .from('profiles')
-      .update(updates)
-      .eq('id', activeId)
+    const { error } = await supabase.from('profiles').update(updates).eq('id', activeId)
     if (error) throw error
     setCharacters(prev => prev.map(c => c.id === activeId ? { ...c, ...updates } : c))
+  }
+
+  // Crée une nouvelle réservation de personnage (en attente de validation MJ)
+  async function reserveCharacter({ firstName, lastName, jobWish, avatarFile }) {
+    if (!user) throw new Error('Non connecté')
+    const snowflake = getSnowflake(user)
+
+    let avatarUrl = null
+    if (avatarFile) {
+      const ext = avatarFile.name.split('.').pop()
+      const path = `${user.id}/reservation-${Date.now()}.${ext}`
+      await supabase.storage.from('avatars').upload(path, avatarFile)
+      const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path)
+      avatarUrl = urlData.publicUrl
+    }
+
+    const fullName = `${firstName} ${lastName}`.trim()
+    const color = randomColor()
+
+    const { data: newProfile, error } = await supabase
+      .from('profiles')
+      .insert({
+        auth_user_id:      user.id,
+        discord_id:         snowflake,
+        username:           fullName,
+        first_name:         firstName.trim(),
+        last_name:          lastName.trim(),
+        job_wish:           jobWish.trim(),
+        avatar_url:         avatarUrl,
+        avatar_color:       color,
+        initials:           fullName.slice(0, 2).toUpperCase(),
+        bio: '', location: '',
+        character_status:   'pending',
+        setup_complete:     false,
+        unlocked_apps:      ['messages', 'phone', 'instagrim', 'map', 'crush', 'notes', 'settings'],
+      })
+      .select()
+      .single()
+
+    if (error) throw error
+    setCharacters(prev => [...prev, newProfile])
+    return newProfile
   }
 
   async function refreshCharacters() {
@@ -142,18 +230,30 @@ export function AuthProvider({ children }) {
   }
 
   const profile = characters.find(c => c.id === activeId) ?? null
+  const activeCharacters  = characters.filter(c => (c.character_status ?? 'active') === 'active')
+  const pendingCharacters = characters.filter(c => c.character_status === 'pending')
+  const maxSlots = slotsForLevel(level)
+  const canReserveNew = activeCharacters.length + pendingCharacters.length < maxSlots
 
   return (
     <AuthContext.Provider value={{
       user,
-      profile,          // le personnage ACTUELLEMENT utilisé (compatible avec tout le code existant)
-      characters,        // tous les personnages du compte
+      profile,
+      characters,
+      activeCharacters,
+      pendingCharacters,
       activeId,
       loading,
+      lastError,
+      xp,
+      level,
+      maxSlots,
+      canReserveNew,
       signOut,
       updateProfile,
       selectCharacter,
       switchCharacter,
+      reserveCharacter,
       refreshCharacters,
     }}>
       {children}
