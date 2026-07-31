@@ -76,7 +76,7 @@ function getFrameVars(frameStyle) {
 }
 
 export default function App() {
-  const { user, loading, profile, activeId, characters, refreshCharacters } = useAuth()
+  const { user, loading, profile, activeId, characters = [], refreshCharacters } = useAuth()
   const [currentScreen, setCurrentScreen] = useState('home')
   const [appOrigin, setAppOrigin] = useState(null) // position de l'icône tapée, pour l'effet "grandit depuis l'icône"
   const [mode, setMode] = useState(() => {

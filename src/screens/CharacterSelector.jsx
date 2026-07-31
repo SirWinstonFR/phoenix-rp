@@ -8,8 +8,8 @@ const ORANGE_LIGHT = '#f5a052'
 
 export default function CharacterSelector() {
   const {
-    activeCharacters, pendingCharacters, selectCharacter, signOut,
-    level, maxSlots, canReserveNew, refreshCharacters,
+    activeCharacters = [], pendingCharacters = [], selectCharacter, signOut,
+    level = 1, maxSlots = 1, canReserveNew, refreshCharacters,
   } = useAuth()
   const [reserving, setReserving] = useState(false)
 

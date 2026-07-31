@@ -25,7 +25,7 @@ const MJ_DISCORD_ID = '804959890291294209'
 const STORAGE_KEY = 'rp_app_order'
 
 export default function HomeScreen({ onOpenApp, onSwitchToDesktop, phoneTheme }) {
-  const { profile, signOut, characters, switchCharacter } = useAuth()
+  const { profile, signOut, characters = [], switchCharacter } = useAuth()
   const unlockedApps = profile?.unlocked_apps ?? ['messages', 'phone', 'instagrim', 'map', 'crush', 'id', 'store', 'bank', 'card']
   const isMJ = profile?.discord_id === MJ_DISCORD_ID
 
