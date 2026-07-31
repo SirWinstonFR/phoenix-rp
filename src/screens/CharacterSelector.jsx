@@ -10,7 +10,7 @@ export default function CharacterSelector() {
   const auth = useAuth()
   const {
     activeCharacters = [], pendingCharacters = [], selectCharacter, signOut,
-    level = 1, maxSlots = 1, canReserveNew, refreshCharacters,
+    level = 1, maxSlots = 1, canReserveNew, refreshCharacters, lastError,
   } = auth
   const [reserving, setReserving] = useState(false)
 
@@ -182,6 +182,16 @@ export default function CharacterSelector() {
         <p style={{ fontSize: 11, color: 'rgba(245,242,238,0.3)', textAlign: 'center', maxWidth: 320 }}>
           Atteins le niveau {nextUnlockLevel(level)} sur Discord pour débloquer un personnage supplémentaire.
         </p>
+      )}
+
+      {lastError && (
+        <div style={{
+          background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+          borderRadius: 10, padding: '10px 14px', maxWidth: 400,
+          fontSize: 11, color: '#f87171', fontFamily: 'monospace', wordBreak: 'break-word',
+        }}>
+          Erreur : {JSON.stringify(lastError)}
+        </div>
       )}
 
       <button

@@ -68,61 +68,79 @@ export function AuthProvider({ children }) {
 
     const missing = charList.filter(c => c.discord_id !== snowflake)
     if (missing.length > 0) {
-      await supabase.from('profiles').update({ discord_id: snowflake }).eq('auth_user_id', authUser.id)
+      try {
+        const { error } = await supabase.from('profiles').update({ discord_id: snowflake }).eq('auth_user_id', authUser.id)
+        if (error) console.error('⚠️ Échec sync discord_id (non bloquant):', error.message)
+      } catch (e) {
+        console.error('⚠️ Exception sync discord_id (non bloquant):', e.message)
+      }
     }
     return charList.map(c => ({ ...c, discord_id: snowflake }))
   }
 
   async function fetchXP(authUser) {
-    const snowflake = getSnowflake(authUser)
-    if (!snowflake) return
-    const { data } = await supabase
-      .from('discord_xp')
-      .select('xp, level')
-      .eq('discord_id', snowflake)
-      .maybeSingle()
-    setXp(data?.xp ?? 0)
-    setLevel(data?.level ?? 1)
+    try {
+      const snowflake = getSnowflake(authUser)
+      if (!snowflake) return
+      const { data } = await supabase
+        .from('discord_xp')
+        .select('xp, level')
+        .eq('discord_id', snowflake)
+        .maybeSingle()
+      setXp(data?.xp ?? 0)
+      setLevel(data?.level ?? 1)
+    } catch (e) {
+      console.error('⚠️ Erreur fetchXP (non bloquant):', e.message)
+    }
   }
 
   async function fetchCharacters(authUser) {
     console.log('🔍 fetchCharacters — auth_user_id recherché :', authUser.id)
 
-    const { data: existing, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('auth_user_id', authUser.id)
-      .order('created_at', { ascending: true })
+    try {
+      const { data: existing, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('auth_user_id', authUser.id)
+        .order('created_at', { ascending: true })
 
-    if (error) {
-      console.error('❌ Erreur fetchCharacters:', error.message, error.details, error.hint)
-      setLastError(error)
+      if (error) {
+        console.error('❌ Erreur fetchCharacters:', error.message, error.details, error.hint)
+        setLastError(error)
+        return // on garde les données précédentes plutôt que de les écraser par du vide
+      }
+      setLastError(null)
+
+      let list = existing ?? []
+      console.log('✅ Personnages reçus de Supabase :', list.length, list.map(c => c.username))
+
+      list = await ensureDiscordIdSynced(authUser, list)
+      setCharacters(list)
+      await fetchXP(authUser)
+
+      // Seuls les persos ACTIFS (validés par le MJ) peuvent être sélectionnés/joués
+      const playable = list.filter(c => (c.character_status ?? 'active') === 'active')
+
+      const savedId = localStorage.getItem(ACTIVE_CHAR_KEY)
+      const savedStillValid = playable.find(c => c.id === savedId)
+
+      if (savedStillValid) {
+        setActiveId(savedId)
+      } else if (playable.length === 1) {
+        setActiveId(playable[0].id)
+        localStorage.setItem(ACTIVE_CHAR_KEY, playable[0].id)
+      } else {
+        setActiveId(null)
+      }
+    } catch (e) {
+      // Filet de sécurité ultime : si quoi que ce soit plante ici, on le voit
+      // au lieu de rester bloqué silencieusement avec une liste vide.
+      console.error('💥 Exception inattendue dans fetchCharacters:', e)
+      setLastError({ message: e.message, stack: e.stack })
+    } finally {
+      // Toujours exécuté, même en cas d'erreur — évite un chargement bloqué à l'infini
       setLoading(false)
-      return // on garde les données précédentes plutôt que de les écraser par du vide
     }
-    setLastError(null)
-
-    let list = existing ?? []
-    list = await ensureDiscordIdSynced(authUser, list)
-    setCharacters(list)
-    await fetchXP(authUser)
-
-    // Seuls les persos ACTIFS (validés par le MJ) peuvent être sélectionnés/joués
-    const playable = list.filter(c => (c.character_status ?? 'active') === 'active')
-
-    const savedId = localStorage.getItem(ACTIVE_CHAR_KEY)
-    const savedStillValid = playable.find(c => c.id === savedId)
-
-    if (savedStillValid) {
-      setActiveId(savedId)
-    } else if (playable.length === 1) {
-      setActiveId(playable[0].id)
-      localStorage.setItem(ACTIVE_CHAR_KEY, playable[0].id)
-    } else {
-      setActiveId(null)
-    }
-
-    setLoading(false)
   }
 
   function selectCharacter(id) {
