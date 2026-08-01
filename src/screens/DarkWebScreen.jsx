@@ -500,60 +500,109 @@ export default function DarkWebScreen({ onBack }) {
 
   // ── ACCUEIL DU MARCHÉ ──
   return (
-    <div className="phone" style={{ background: '#050302' }}>
-      <div className="screen">
-        <div className="app-header" style={{ borderColor: 'rgba(232,117,44,0.15)', background: 'rgba(5,3,2,0.9)' }}>
-          <button className="icon-btn" onClick={onBack} style={{ color: ORANGE_LIGHT }}>←</button>
+    <div className="phone" style={{ background: '#040201' }}>
+      <div className="screen" style={{ fontFamily: "'Courier New', monospace" }}>
+
+        {/* Barre de titre terminal */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '9px 12px', borderBottom: '1px solid rgba(232,117,44,0.15)',
+          background: 'rgba(232,117,44,0.04)', flexShrink: 0,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button onClick={onBack} style={{ background: 'none', border: 'none', color: ORANGE_LIGHT, fontSize: 12, cursor: 'pointer', padding: 0 }}>←</button>
+            <div style={{ display: 'flex', gap: 5 }}>
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#ff5f57' }} />
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#febc2e' }} />
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#28c840' }} />
+            </div>
+          </div>
+          <p style={{ fontSize: 8, color: 'rgba(245,160,82,0.5)', letterSpacing: '0.02em' }}>
+            thehollow@access:~ — zsh
+          </p>
           <span style={{
-            fontSize: 17, fontWeight: 800, letterSpacing: -0.3,
-            color: '#f5f2ee',
-          }}>🧅 The Hollow</span>
-          <span style={{ width: 32 }} />
+            display: 'flex', alignItems: 'center', gap: 4,
+            fontSize: 7, fontWeight: 800, color: '#f5a052',
+            background: 'rgba(232,117,44,0.12)', border: '1px solid rgba(232,117,44,0.3)',
+            borderRadius: 4, padding: '2px 6px', letterSpacing: '0.05em',
+          }}>
+            <span className="gate-blink" style={{ width: 4, height: 4, borderRadius: '50%', background: '#f5a052', display: 'inline-block' }} />
+            LIVE
+          </span>
         </div>
 
-        <div style={{ flex: 1, overflowY: 'auto', padding: '18px 16px', scrollbarWidth: 'none' }}>
+        <div className="pc-scroll" style={{ flex: 1, overflowY: 'auto', padding: '14px 16px 18px' }}>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
+          <p style={{ color: '#4a3020', fontSize: 10, marginBottom: 3 }}>
+            <span style={{ color: '#f5a052' }}>thehollow</span>@access:~ $ ls /market
+          </p>
+          <p style={{ fontSize: 20, fontWeight: 800, color: '#f5f2ee', marginBottom: 14 }}>
+            🧅 <span style={{ color: ORANGE_LIGHT, textShadow: `0 0 12px ${ORANGE}` }}>The Hollow</span>
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
             {CATEGORIES.map((cat, i) => (
               <div
                 key={cat.id}
-                className="dw-cat"
                 onClick={() => openCategory(cat)}
                 style={{
-                  background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)',
-                  borderRadius: 16, padding: '16px 14px', cursor: 'pointer',
-                  animation: `dwFadeUp 0.35s cubic-bezier(0.22,1,0.36,1) ${i * 0.06}s both`,
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  background: 'rgba(232,117,44,0.03)', border: '1px solid rgba(232,117,44,0.15)',
+                  borderRadius: 6, padding: '10px 12px', cursor: 'pointer',
+                  animation: `dwFadeUp 0.3s cubic-bezier(0.22,1,0.36,1) ${i * 0.05}s both`,
                 }}
+                className="dw-term-row"
               >
-                <div style={{ fontSize: 24, marginBottom: 8 }}>{cat.icon}</div>
-                <p style={{ fontSize: 13, fontWeight: 700, color: '#f5f2ee', marginBottom: 2 }}>{cat.label}</p>
-                <p style={{ fontSize: 10, color: 'rgba(245,242,238,0.35)' }}>{cat.sub}</p>
+                <span style={{ color: ORANGE, fontSize: 11, flexShrink: 0 }}>[{i + 1}]</span>
+                <span style={{ fontSize: 15, flexShrink: 0 }}>{cat.icon}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 11.5, fontWeight: 700, color: '#f5f2ee' }}>{cat.label}</p>
+                  <p style={{ fontSize: 9, color: 'rgba(245,242,238,0.35)' }}>{cat.sub}</p>
+                </div>
+                <span style={{ color: 'rgba(232,117,44,0.5)', fontSize: 11 }}>&gt;</span>
               </div>
             ))}
           </div>
 
+          <p style={{ color: '#4a3020', fontSize: 10, marginBottom: 8 }}>
+            <span style={{ color: '#f5a052' }}>thehollow</span>@access:~ $ contracts --active
+          </p>
+
           <div
-            className="dw-row"
             onClick={() => { setView('bounties'); fetchBounties() }}
             style={{
-              background: `linear-gradient(135deg, ${ORANGE_DIM}, rgba(232,117,44,0.03))`,
-              border: '1px solid rgba(232,117,44,0.3)',
-              borderRadius: 16, padding: '18px 16px', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', gap: 14,
-              animation: 'dwFadeUp 0.35s ease 0.3s both',
+              display: 'flex', alignItems: 'center', gap: 12,
+              background: `linear-gradient(135deg, ${ORANGE_DIM}, rgba(232,117,44,0.02))`,
+              border: '1px solid rgba(232,117,44,0.35)',
+              borderRadius: 6, padding: '13px 14px', cursor: 'pointer',
+              animation: 'dwFadeUp 0.3s ease 0.28s both',
             }}
           >
-            <div style={{ fontSize: 28 }}>🎯</div>
+            <span style={{ fontSize: 20 }}>🎯</span>
             <div style={{ flex: 1 }}>
-              <p style={{ fontSize: 14, fontWeight: 800, color: '#f5f2ee' }}>Tableau des contrats</p>
-              <p style={{ fontSize: 11, color: 'rgba(245,242,238,0.4)' }}>Têtes mises à prix</p>
+              <p style={{ fontSize: 12.5, fontWeight: 800, color: '#f5f2ee' }}>Tableau des contrats</p>
+              <p style={{ fontSize: 9.5, color: 'rgba(245,242,238,0.4)' }}>Têtes mises à prix</p>
             </div>
-            <span style={{ color: ORANGE_LIGHT, fontSize: 18 }}>›</span>
+            <span style={{ color: ORANGE_LIGHT, fontSize: 15 }}>&gt;</span>
           </div>
 
-          <p style={{ fontSize: 9, color: 'rgba(245,242,238,0.15)', textAlign: 'center', marginTop: 26, letterSpacing: '0.04em' }}>
-            The Hollow n'est ni responsable ni affilié à aucune transaction.
+          <p style={{ fontSize: 8, color: 'rgba(245,160,82,0.2)', textAlign: 'center', marginTop: 24, letterSpacing: '0.03em' }}>
+            [OK] THE_HOLLOW.NON_RESPONSABLE · AUCUNE_TRANSACTION_AFFILIÉE
           </p>
+        </div>
+
+        {/* Barre de statut */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '7px 12px', borderTop: '1px solid rgba(232,117,44,0.12)',
+          background: 'rgba(0,0,0,0.3)', fontSize: 7, color: 'rgba(245,160,82,0.4)',
+          letterSpacing: '0.03em', flexShrink: 0,
+        }}>
+          <span>NŒUD #{Math.random().toString(16).slice(2, 6).toUpperCase()}</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+            <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#4ade80' }} />
+            CHIFFRÉ
+          </span>
         </div>
 
         {toast && <DarkToast msg={toast} />}
@@ -580,6 +629,16 @@ export default function DarkWebScreen({ onBack }) {
           background: rgba(232,117,44,0.04) !important;
         }
         .dw-row:active {
+          transform: scale(0.98);
+        }
+        .dw-term-row {
+          transition: border-color 0.15s, background 0.15s;
+        }
+        .dw-term-row:hover {
+          border-color: rgba(232,117,44,0.4) !important;
+          background: rgba(232,117,44,0.07) !important;
+        }
+        .dw-term-row:active {
           transform: scale(0.98);
         }
         .dw-btn-primary {
