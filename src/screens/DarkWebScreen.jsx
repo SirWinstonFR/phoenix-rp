@@ -116,112 +116,157 @@ export default function DarkWebScreen({ onBack }) {
       <div className="phone" style={{ background: '#040201' }}>
         <div style={{
           flex: 1, display: 'flex', flexDirection: 'column',
-          alignItems: 'center', justifyContent: 'center', gap: 20,
-          padding: 24, fontFamily: "'Courier New', monospace",
+          alignItems: 'center', justifyContent: 'center',
+          padding: 16, fontFamily: "'Courier New', monospace",
           position: 'relative', overflow: 'hidden',
         }}>
-          {/* Scanlines orange */}
+          {/* Scanlines + bruit de fond */}
           <div style={{
             position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0,
-            background: 'repeating-linear-gradient(0deg, rgba(232,117,44,0.025) 0px, transparent 1px, transparent 3px)',
+            background: 'repeating-linear-gradient(0deg, rgba(232,117,44,0.02) 0px, transparent 1px, transparent 3px)',
           }} />
-
-          {/* Bruit diagonal subtil */}
           <div style={{
-            position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0, opacity: 0.4,
-            background: 'repeating-linear-gradient(115deg, transparent 0px, transparent 60px, rgba(232,117,44,0.02) 61px, transparent 62px)',
-          }} />
-
-          <div style={{
-            position: 'absolute', top: '28%', left: '50%', transform: 'translate(-50%,-50%)',
-            width: 280, height: 280, borderRadius: '50%',
+            position: 'absolute', top: '35%', left: '50%', transform: 'translate(-50%,-50%)',
+            width: 320, height: 320, borderRadius: '50%',
             background: `radial-gradient(circle, ${ORANGE_DIM} 0%, transparent 70%)`,
-            pointerEvents: 'none', animation: 'gatePulse 3.5s ease-in-out infinite',
+            pointerEvents: 'none', animation: 'gatePulse 3.5s ease-in-out infinite', zIndex: 0,
           }} />
 
           <button onClick={onBack} style={{
-            position: 'absolute', top: 20, left: 20,
+            position: 'absolute', top: 12, left: 12,
             background: 'none', border: 'none', color: 'rgba(232,117,44,0.4)',
-            fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', zIndex: 2,
+            fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', zIndex: 3,
           }}>← quitter</button>
 
-          {/* Statut connexion façon terminal */}
-          <p style={{
-            fontSize: 9, color: 'rgba(232,117,44,0.35)', letterSpacing: '0.1em',
-            position: 'relative', zIndex: 1,
-          }}>
-            <span className="gate-blink">●</span> CONNEXION AU RÉSEAU MASQUÉ…
-          </p>
-
+          {/* ── Fenêtre terminal ── */}
           <div style={{
-            fontSize: 38, position: 'relative', zIndex: 1,
-            filter: `drop-shadow(0 0 16px ${ORANGE_DIM})`,
-            animation: 'gateFlicker 4s ease-in-out infinite',
-          }}>🧅</div>
-
-          <p style={{
-            fontSize: 13, fontWeight: 700, color: ORANGE_LIGHT, letterSpacing: '0.18em',
-            position: 'relative', zIndex: 1,
-          }}>
-            ACCÈS RESTREINT<span className="gate-cursor">_</span>
-          </p>
-
-          <div style={{
-            width: '100%', maxWidth: 230, position: 'relative', zIndex: 1,
+            width: '100%', maxWidth: 300, position: 'relative', zIndex: 2,
+            background: 'rgba(8,5,3,0.92)', borderRadius: 10,
+            border: '1px solid rgba(232,117,44,0.25)',
+            boxShadow: `0 0 0 1px rgba(0,0,0,0.5), 0 20px 60px rgba(0,0,0,0.7), 0 0 40px ${ORANGE_DIM}`,
+            overflow: 'hidden',
             animation: error ? 'shakeGate 0.4s ease' : 'none',
           }}>
-            <p style={{ fontSize: 9, color: 'rgba(232,117,44,0.4)', letterSpacing: '0.12em', marginBottom: 6, textAlign: 'center' }}>
-              CLEF D'ACCÈS
-            </p>
-            <input
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && checkPassword()}
-              placeholder="••••••••"
-              autoFocus
-              style={{
-                width: '100%', background: 'rgba(232,117,44,0.04)',
-                border: `1px solid ${error ? '#ef4444' : 'rgba(232,117,44,0.3)'}`,
-                borderRadius: 6, padding: '13px 16px',
-                color: ORANGE_LIGHT, fontSize: 15, fontFamily: "'Courier New', monospace",
-                textAlign: 'center', letterSpacing: '0.3em',
-                outline: 'none', transition: 'border-color 0.2s, box-shadow 0.2s',
-              }}
-              onFocus={e => { if (!error) { e.target.style.borderColor = ORANGE; e.target.style.boxShadow = `0 0 0 3px ${ORANGE_DIM}` } }}
-              onBlur={e => { if (!error) { e.target.style.borderColor = 'rgba(232,117,44,0.3)'; e.target.style.boxShadow = 'none' } }}
-            />
+            {/* Barre de titre */}
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '9px 12px', borderBottom: '1px solid rgba(232,117,44,0.15)',
+              background: 'rgba(232,117,44,0.04)',
+            }}>
+              <div style={{ display: 'flex', gap: 5 }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ff5f57' }} />
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#febc2e' }} />
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#28c840' }} />
+              </div>
+              <p style={{ fontSize: 8, color: 'rgba(245,160,82,0.5)', letterSpacing: '0.02em' }}>
+                thehollow@access:~ — zsh
+              </p>
+              <span style={{
+                display: 'flex', alignItems: 'center', gap: 4,
+                fontSize: 7, fontWeight: 800, color: '#f5a052',
+                background: 'rgba(232,117,44,0.12)', border: '1px solid rgba(232,117,44,0.3)',
+                borderRadius: 4, padding: '2px 6px', letterSpacing: '0.05em',
+              }}>
+                <span className="gate-blink" style={{ width: 4, height: 4, borderRadius: '50%', background: '#f5a052', display: 'inline-block' }} />
+                LIVE
+              </span>
+            </div>
+
+            {/* Corps du terminal */}
+            <div style={{ padding: '14px 14px 16px', fontSize: 10 }}>
+              <p style={{ color: '#4a3020', marginBottom: 6 }}>
+                <span style={{ color: '#f5a052' }}>thehollow</span>@access:~ $ sys status
+              </p>
+              <div style={{ color: 'rgba(232,117,44,0.5)', marginBottom: 12, lineHeight: 1.7 }}>
+                <p>&gt; NET.MASQUER........... <span style={{ color: '#4ade80' }}>[ OK ]</span></p>
+                <p>&gt; TUNNEL.CHIFFRÉ.......... <span style={{ color: '#4ade80' }}>[ OK ]</span></p>
+                <p>&gt; TRACE.SUPPRIMÉE......... <span style={{ color: '#4ade80' }}>[ OK ]</span></p>
+              </div>
+
+              <p style={{ color: '#4a3020', marginBottom: 8 }}>
+                <span style={{ color: '#f5a052' }}>thehollow</span>@access:~ $ cat /access.msg
+              </p>
+
+              <p style={{
+                fontSize: 19, fontWeight: 800, color: '#f5f2ee', lineHeight: 1.25,
+                marginBottom: 10, letterSpacing: '-0.01em',
+              }}>
+                ACCÈS <span style={{ color: ORANGE_LIGHT, textShadow: `0 0 14px ${ORANGE}` }}>RESTREINT</span>.<span className="gate-cursor">_</span>
+              </p>
+
+              <p style={{ color: 'rgba(245,242,238,0.4)', fontSize: 9.5, lineHeight: 1.6, marginBottom: 14 }}>
+                &gt; Réseau non répertorié.<br />
+                &gt; Clef d'accès requise.
+              </p>
+
+              <p style={{ color: '#4a3020', marginBottom: 8 }}>
+                <span style={{ color: '#f5a052' }}>thehollow</span>@access:~ $ authenticate --key
+              </p>
+
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                background: 'rgba(232,117,44,0.05)',
+                border: `1px solid ${error ? '#ef4444' : 'rgba(232,117,44,0.25)'}`,
+                borderRadius: 6, padding: '9px 10px', marginBottom: 10,
+                transition: 'border-color 0.2s',
+              }}>
+                <span style={{ color: ORANGE }}>$</span>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && checkPassword()}
+                  placeholder="clef_d_accès"
+                  autoFocus
+                  style={{
+                    flex: 1, background: 'none', border: 'none', outline: 'none',
+                    color: ORANGE_LIGHT, fontSize: 12, fontFamily: "'Courier New', monospace",
+                    letterSpacing: '0.05em',
+                  }}
+                />
+                <button
+                  onClick={checkPassword}
+                  disabled={checking || !password}
+                  style={{
+                    padding: '5px 12px', borderRadius: 4, border: 'none',
+                    background: password ? ORANGE : 'rgba(255,255,255,0.06)',
+                    color: password ? '#000' : '#555', fontSize: 9, fontWeight: 800,
+                    letterSpacing: '0.04em', cursor: password ? 'pointer' : 'not-allowed',
+                    fontFamily: 'inherit', flexShrink: 0,
+                  }}
+                >
+                  {checking ? '…' : 'ENTRER →'}
+                </button>
+              </div>
+
+              {error ? (
+                <p style={{ fontSize: 9, color: '#ef4444', letterSpacing: '0.05em' }}>
+                  [ ERREUR ] Clef invalide — accès refusé.
+                </p>
+              ) : (
+                <p style={{ fontSize: 8, color: 'rgba(245,160,82,0.3)', letterSpacing: '0.03em' }}>
+                  [OK] AUCUNE.TRACE.ENREGISTRÉE · SESSION.ANONYME
+                </p>
+              )}
+            </div>
+
+            {/* Barre de statut */}
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '7px 12px', borderTop: '1px solid rgba(232,117,44,0.12)',
+              background: 'rgba(0,0,0,0.3)', fontSize: 7, color: 'rgba(245,160,82,0.4)',
+              letterSpacing: '0.03em',
+            }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                🧅 THE HOLLOW
+              </span>
+              <span>NŒUD #{Math.random().toString(16).slice(2, 6).toUpperCase()}</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#4ade80' }} />
+                CHIFFRÉ
+              </span>
+            </div>
           </div>
-
-          {error && (
-            <p style={{ fontSize: 11, color: '#ef4444', letterSpacing: '0.08em', position: 'relative', zIndex: 1 }}>
-              [ ACCÈS REFUSÉ ]
-            </p>
-          )}
-
-          <button
-            onClick={checkPassword}
-            disabled={checking || !password}
-            style={{
-              padding: '12px 32px', borderRadius: 6,
-              background: password ? `linear-gradient(135deg, ${ORANGE}, #c85f1e)` : 'rgba(255,255,255,0.04)',
-              border: 'none',
-              color: password ? '#000' : '#555', fontSize: 13, fontWeight: 800, letterSpacing: '0.1em',
-              cursor: password ? 'pointer' : 'not-allowed', fontFamily: "'Courier New', monospace",
-              boxShadow: password ? `0 6px 20px ${ORANGE_DIM}` : 'none',
-              transition: 'all 0.2s',
-              position: 'relative', zIndex: 1,
-            }}
-          >
-            {checking ? '[ VÉRIFICATION… ]' : '[ ENTRER ]'}
-          </button>
-
-          <p style={{
-            fontSize: 8, color: 'rgba(232,117,44,0.2)', letterSpacing: '0.06em',
-            position: 'relative', zIndex: 1, marginTop: 4,
-          }}>
-            NŒUD #{Math.random().toString(16).slice(2, 8).toUpperCase()} · CHIFFRÉ
-          </p>
         </div>
 
         <style>{`
@@ -231,15 +276,8 @@ export default function DarkWebScreen({ onBack }) {
             75% { transform: translateX(8px); }
           }
           @keyframes gatePulse {
-            0%, 100% { opacity: 0.6; transform: translate(-50%,-50%) scale(1); }
-            50%      { opacity: 1; transform: translate(-50%,-50%) scale(1.08); }
-          }
-          @keyframes gateFlicker {
-            0%, 92%, 100% { opacity: 1; }
-            93% { opacity: 0.4; }
-            94% { opacity: 1; }
-            96% { opacity: 0.5; }
-            97% { opacity: 1; }
+            0%, 100% { opacity: 0.5; transform: translate(-50%,-50%) scale(1); }
+            50%      { opacity: 0.9; transform: translate(-50%,-50%) scale(1.08); }
           }
           .gate-blink {
             animation: gateBlinkDot 1.4s ease-in-out infinite;
