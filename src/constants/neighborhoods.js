@@ -1,4 +1,4 @@
-// 4 grands quartiers fictifs de Phoenix RP, chacun avec sa propre identité
+// 5 quartiers de Phoenix RP — 4 grands quadrants + 1 quartier central
 // Fichier partagé entre MapScreen (affichage carte) et CharacterReservationScreen (choix résidence)
 export const NEIGHBORHOODS = [
   {
@@ -6,11 +6,13 @@ export const NEIGHBORHOODS = [
     name: 'Ember District',
     category: 'gouvernance', // Le cœur administratif et financier de la ville
     color: '#7a1024',
-    // Quadrant nord-ouest — Glendale / Alhambra jusqu'au centre
+    // Quadrant nord-ouest — Glendale / Alhambra, avec un décroché autour du centre
     coords: [
       [-112.2500, 33.6200],
       [-112.0500, 33.6200],
-      [-112.0500, 33.4600],
+      [-112.0500, 33.4750],
+      [-112.0700, 33.4750],
+      [-112.0700, 33.4600],
       [-112.2500, 33.4600],
       [-112.2500, 33.6200],
     ],
@@ -20,12 +22,14 @@ export const NEIGHBORHOODS = [
     name: 'Sundown Strip',
     category: 'bar', // Le quartier de la vie nocturne et des divertissements
     color: '#c9963f',
-    // Quadrant nord-est — du centre jusqu'à Paradise Valley / Scottsdale
+    // Quadrant nord-est — Paradise Valley / Scottsdale, avec un décroché autour du centre
     coords: [
       [-112.0500, 33.6200],
       [-111.8500, 33.6200],
       [-111.8500, 33.4600],
-      [-112.0500, 33.4600],
+      [-112.0600, 33.4600],
+      [-112.0600, 33.4750],
+      [-112.0500, 33.4750],
       [-112.0500, 33.6200],
     ],
   },
@@ -34,13 +38,15 @@ export const NEIGHBORHOODS = [
     name: 'Ashland Row',
     category: 'commerce', // La zone commerciale et industrielle
     color: '#22c55e',
-    // Quadrant sud-est — South Mountain jusqu'à Tempe
+    // Quadrant sud-est — South Mountain / Tempe, avec un décroché autour du centre
     coords: [
-      [-112.0500, 33.4600],
-      [-111.8500, 33.4600],
-      [-111.8500, 33.3000],
+      [-112.0600, 33.4600],
+      [-112.0600, 33.4450],
+      [-112.0500, 33.4450],
       [-112.0500, 33.3000],
-      [-112.0500, 33.4600],
+      [-111.8500, 33.3000],
+      [-111.8500, 33.4600],
+      [-112.0600, 33.4600],
     ],
   },
   {
@@ -48,13 +54,29 @@ export const NEIGHBORHOODS = [
     name: 'Willow Hollow',
     category: 'domicile', // Le grand quartier résidentiel
     color: '#4dd9ff',
-    // Quadrant sud-ouest — Estrella / Laveen
+    // Quadrant sud-ouest — Estrella / Laveen, avec un décroché autour du centre
     coords: [
       [-112.2500, 33.4600],
-      [-112.0500, 33.4600],
-      [-112.0500, 33.3000],
+      [-112.0700, 33.4600],
+      [-112.0700, 33.4450],
+      [-112.0600, 33.4450],
+      [-112.0600, 33.3000],
       [-112.2500, 33.3000],
       [-112.2500, 33.4600],
+    ],
+  },
+  {
+    id: 'downtown-phoenix',
+    name: 'Downtown Phoenix',
+    category: 'travail', // Le quartier des affaires, au croisement des 4 autres
+    color: '#b96eff',
+    // Petit quartier central, comble l'espace laissé par les décrochés des 4 quadrants
+    coords: [
+      [-112.0700, 33.4750],
+      [-112.0500, 33.4750],
+      [-112.0500, 33.4450],
+      [-112.0700, 33.4450],
+      [-112.0700, 33.4750],
     ],
   },
 ]
@@ -65,4 +87,5 @@ export const NEIGHBORHOOD_DESCRIPTIONS = {
   'sundown-strip': "Le quartier qui ne dort jamais. Bars, clubs et néons — c'est ici que la ville se retrouve une fois la nuit tombée.",
   'ashland-row': "Zone commerciale et industrielle tentaculaire. Entrepôts, boutiques et ateliers y forment l'ossature économique de la ville.",
   'willow-hollow': "Le grand quartier résidentiel de Phoenix. Pavillons, immeubles et vie de quartier tranquille, loin de l'agitation du centre.",
+  'downtown-phoenix': "Le quartier des affaires, au carrefour des quatre autres. Gratte-ciels, sièges sociaux et bureaux — c'est ici que Phoenix travaille.",
 }
