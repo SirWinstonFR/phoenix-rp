@@ -6,12 +6,13 @@ export const NEIGHBORHOODS = [
     name: 'Ember District',
     category: 'gouvernance', // Le cœur administratif et financier de la ville
     color: '#7a1024',
+    // Quadrant nord-ouest — Glendale / Alhambra jusqu'au centre
     coords: [
-      [-112.1000, 33.5000],
-      [-112.0600, 33.5000],
-      [-112.0600, 33.4600],
-      [-112.1000, 33.4600],
-      [-112.1000, 33.5000],
+      [-112.2500, 33.6200],
+      [-112.0500, 33.6200],
+      [-112.0500, 33.4600],
+      [-112.2500, 33.4600],
+      [-112.2500, 33.6200],
     ],
   },
   {
@@ -19,12 +20,13 @@ export const NEIGHBORHOODS = [
     name: 'Sundown Strip',
     category: 'bar', // Le quartier de la vie nocturne et des divertissements
     color: '#c9963f',
+    // Quadrant nord-est — du centre jusqu'à Paradise Valley / Scottsdale
     coords: [
-      [-112.0600, 33.4800],
-      [-112.0200, 33.4800],
-      [-112.0200, 33.4400],
-      [-112.0600, 33.4400],
-      [-112.0600, 33.4800],
+      [-112.0500, 33.6200],
+      [-111.8500, 33.6200],
+      [-111.8500, 33.4600],
+      [-112.0500, 33.4600],
+      [-112.0500, 33.6200],
     ],
   },
   {
@@ -32,12 +34,13 @@ export const NEIGHBORHOODS = [
     name: 'Ashland Row',
     category: 'commerce', // La zone commerciale et industrielle
     color: '#22c55e',
+    // Quadrant sud-est — South Mountain jusqu'à Tempe
     coords: [
-      [-112.1000, 33.4400],
-      [-112.0600, 33.4400],
-      [-112.0600, 33.4000],
-      [-112.1000, 33.4000],
-      [-112.1000, 33.4400],
+      [-112.0500, 33.4600],
+      [-111.8500, 33.4600],
+      [-111.8500, 33.3000],
+      [-112.0500, 33.3000],
+      [-112.0500, 33.4600],
     ],
   },
   {
@@ -45,12 +48,13 @@ export const NEIGHBORHOODS = [
     name: 'Willow Hollow',
     category: 'domicile', // Le grand quartier résidentiel
     color: '#4dd9ff',
+    // Quadrant sud-ouest — Estrella / Laveen
     coords: [
-      [-112.1400, 33.4600],
-      [-112.1000, 33.4600],
-      [-112.1000, 33.4200],
-      [-112.1400, 33.4200],
-      [-112.1400, 33.4600],
+      [-112.2500, 33.4600],
+      [-112.0500, 33.4600],
+      [-112.0500, 33.3000],
+      [-112.2500, 33.3000],
+      [-112.2500, 33.4600],
     ],
   },
 ]
