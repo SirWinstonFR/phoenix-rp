@@ -16,6 +16,7 @@ import DarkWebScreen from './screens/DarkWebScreen'
 import ProfileCardScreen from './screens/ProfileCardScreen'
 import MJDashboardScreen from './screens/MJDashboardScreen'
 import WikiPanel from './components/WikiPanel'
+import { getAppMeta } from './constants/apps'
 
 const SCREENS = {
   home:      HomeScreen,
@@ -81,6 +82,7 @@ export default function App() {
   const [currentScreen, setCurrentScreen] = useState('home')
   const [appOrigin, setAppOrigin] = useState(null) // position de l'icône tapée, pour l'effet "grandit depuis l'icône"
   const [wikiOpen, setWikiOpen] = useState(false)
+  const [loadingAppId, setLoadingAppId] = useState(null) // appli en cours de "chargement" fictif
   const [mode, setMode] = useState(() => {
     return localStorage.getItem('rp_mode') ?? 'phone'
   })
@@ -206,20 +208,27 @@ export default function App() {
       )}
 
       <div style={{ position: 'relative', zIndex: 2 }}>
-        <Screen
-          onOpenApp={(appId, origin) => {
-            if (SCREENS[appId]) {
-              setAppOrigin(origin ?? null)
-              setCurrentScreen(appId)
-            } else {
-              alert('Cette app arrive bientôt !')
-            }
-          }}
-          onBack={() => { setAppOrigin(null); setCurrentScreen('home') }}
-          onSwitchToDesktop={() => setMode('desktop')}
-          onOpenWiki={() => setWikiOpen(true)}
-          phoneTheme={phoneTheme}
-        />
+        {loadingAppId ? (
+          <AppLoadingSplash appId={loadingAppId} onFinish={() => {
+            setCurrentScreen(loadingAppId)
+            setLoadingAppId(null)
+          }} />
+        ) : (
+          <Screen
+            onOpenApp={(appId, origin) => {
+              if (SCREENS[appId]) {
+                setAppOrigin(origin ?? null)
+                setLoadingAppId(appId)
+              } else {
+                alert('Cette app arrive bientôt !')
+              }
+            }}
+            onBack={() => { setAppOrigin(null); setCurrentScreen('home') }}
+            onSwitchToDesktop={() => setMode('desktop')}
+            onOpenWiki={() => setWikiOpen(true)}
+            phoneTheme={phoneTheme}
+          />
+        )}
       </div>
 
       {/* Zone de geste — tout en bas de l'écran, comme la barre d'accueil iOS */}
@@ -249,5 +258,70 @@ export default function App() {
 
     {wikiOpen && <WikiPanel onClose={() => setWikiOpen(false)} />}
     </>
+  )
+}
+
+// Écran de "chargement" fictif — logo de l'appli + barre de progression animée
+function AppLoadingSplash({ appId, onFinish }) {
+  const meta = getAppMeta(appId)
+  const DURATION = 750 // ms — synchronisé avec l'animation CSS de la barre
+
+  useEffect(() => {
+    const t = setTimeout(onFinish, DURATION)
+    return () => clearTimeout(t)
+  }, [appId])
+
+  return (
+    <div className="phone">
+      <div style={{
+        flex: 1, display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', gap: 22,
+        background: meta?.bg ?? 'linear-gradient(135deg,#1a1a1a,#222)',
+      }}>
+        <div style={{
+          width: 88, height: 88, borderRadius: 24,
+          background: 'rgba(255,255,255,0.06)',
+          border: '1px solid rgba(255,255,255,0.1)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 42, boxShadow: '0 10px 40px rgba(0,0,0,0.4)',
+          animation: 'splashPulse 1.1s ease-in-out infinite',
+          overflow: 'hidden',
+        }}>
+          {meta?.img
+            ? <img src={meta.img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            : meta?.icon ?? '📱'
+          }
+        </div>
+
+        <p style={{
+          fontSize: 15, fontWeight: 700, color: '#fff',
+          fontFamily: 'Inter, sans-serif', letterSpacing: -0.2,
+        }}>
+          {meta?.label ?? 'Chargement'}
+        </p>
+
+        <div style={{
+          width: 140, height: 4, borderRadius: 3,
+          background: 'rgba(255,255,255,0.12)', overflow: 'hidden',
+        }}>
+          <div style={{
+            height: '100%', borderRadius: 3,
+            background: 'linear-gradient(90deg, rgba(255,255,255,0.5), #fff)',
+            animation: `splashBar ${DURATION}ms cubic-bezier(0.4,0,0.2,1) forwards`,
+          }} />
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes splashBar {
+          from { width: 0%; }
+          to   { width: 100%; }
+        }
+        @keyframes splashPulse {
+          0%, 100% { transform: scale(1); }
+          50%      { transform: scale(1.05); }
+        }
+      `}</style>
+    </div>
   )
 }
