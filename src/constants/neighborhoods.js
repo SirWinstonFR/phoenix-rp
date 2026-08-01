@@ -1,4 +1,10 @@
 // 5 quartiers de Phoenix RP — 4 grands quadrants + 1 quartier central
+// Contours calés sur les vraies autoroutes qui structurent la ville :
+//   I-17 (Black Canyon Fwy)   → limite ouest du centre-ville, ~ -112.087
+//   SR-51 (Piestewa Fwy)      → limite est du centre-ville, ~ -112.040
+//   I-10 (Papago Fwy)         → limite sud du centre-ville, ~ 33.4409
+//   McDowell Rd               → limite nord du centre-ville, ~ 33.4696
+// (Loop 101 sert de limite extérieure nord, approximative)
 // Fichier partagé entre MapScreen (affichage carte) et CharacterReservationScreen (choix résidence)
 export const NEIGHBORHOODS = [
   {
@@ -6,15 +12,15 @@ export const NEIGHBORHOODS = [
     name: 'Ember District',
     category: 'gouvernance', // Le cœur administratif et financier de la ville
     color: '#7a1024',
-    // Quadrant nord-ouest — Glendale / Alhambra, avec un décroché autour du centre
+    // Quart nord-ouest, borné à l'est par I-17 puis le centre-ville
     coords: [
-      [-112.2500, 33.6200],
-      [-112.0500, 33.6200],
-      [-112.0500, 33.4750],
-      [-112.0700, 33.4750],
-      [-112.0700, 33.4600],
-      [-112.2500, 33.4600],
-      [-112.2500, 33.6200],
+      [-112.2500, 33.4409],
+      [-112.0870, 33.4409],
+      [-112.0870, 33.4696],
+      [-112.0635, 33.4696],
+      [-112.0635, 33.6800],
+      [-112.2500, 33.6800],
+      [-112.2500, 33.4409],
     ],
   },
   {
@@ -22,15 +28,15 @@ export const NEIGHBORHOODS = [
     name: 'Sundown Strip',
     category: 'bar', // Le quartier de la vie nocturne et des divertissements
     color: '#c9963f',
-    // Quadrant nord-est — Paradise Valley / Scottsdale, avec un décroché autour du centre
+    // Quart nord-est, borné à l'ouest par SR-51 puis le centre-ville
     coords: [
-      [-112.0500, 33.6200],
-      [-111.8500, 33.6200],
-      [-111.8500, 33.4600],
-      [-112.0600, 33.4600],
-      [-112.0600, 33.4750],
-      [-112.0500, 33.4750],
-      [-112.0500, 33.6200],
+      [-112.0635, 33.6800],
+      [-111.8500, 33.6800],
+      [-111.8500, 33.4409],
+      [-112.0400, 33.4409],
+      [-112.0400, 33.4696],
+      [-112.0635, 33.4696],
+      [-112.0635, 33.6800],
     ],
   },
   {
@@ -38,15 +44,13 @@ export const NEIGHBORHOODS = [
     name: 'Ashland Row',
     category: 'commerce', // La zone commerciale et industrielle
     color: '#22c55e',
-    // Quadrant sud-est — South Mountain / Tempe, avec un décroché autour du centre
+    // Quart sud-est, sous I-10
     coords: [
-      [-112.0600, 33.4600],
-      [-112.0600, 33.4450],
-      [-112.0500, 33.4450],
-      [-112.0500, 33.3000],
+      [-112.0635, 33.3000],
       [-111.8500, 33.3000],
-      [-111.8500, 33.4600],
-      [-112.0600, 33.4600],
+      [-111.8500, 33.4409],
+      [-112.0635, 33.4409],
+      [-112.0635, 33.3000],
     ],
   },
   {
@@ -54,29 +58,26 @@ export const NEIGHBORHOODS = [
     name: 'Willow Hollow',
     category: 'domicile', // Le grand quartier résidentiel
     color: '#4dd9ff',
-    // Quadrant sud-ouest — Estrella / Laveen, avec un décroché autour du centre
+    // Quart sud-ouest, sous I-10
     coords: [
-      [-112.2500, 33.4600],
-      [-112.0700, 33.4600],
-      [-112.0700, 33.4450],
-      [-112.0600, 33.4450],
-      [-112.0600, 33.3000],
       [-112.2500, 33.3000],
-      [-112.2500, 33.4600],
+      [-112.0635, 33.3000],
+      [-112.0635, 33.4409],
+      [-112.2500, 33.4409],
+      [-112.2500, 33.3000],
     ],
   },
   {
     id: 'downtown-phoenix',
     name: 'Downtown Phoenix',
-    category: 'travail', // Le quartier des affaires, au croisement des 4 autres
+    category: 'travail', // Le quartier des affaires, encadré par I-17, SR-51, I-10 et McDowell Rd
     color: '#b96eff',
-    // Petit quartier central, comble l'espace laissé par les décrochés des 4 quadrants
     coords: [
-      [-112.0700, 33.4750],
-      [-112.0500, 33.4750],
-      [-112.0500, 33.4450],
-      [-112.0700, 33.4450],
-      [-112.0700, 33.4750],
+      [-112.0870, 33.4696],
+      [-112.0400, 33.4696],
+      [-112.0400, 33.4409],
+      [-112.0870, 33.4409],
+      [-112.0870, 33.4696],
     ],
   },
 ]
