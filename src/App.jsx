@@ -176,8 +176,8 @@ export default function App() {
   return (
     <>
     <div style={{
-      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
-      transform: `translateX(${wikiOpen ? -90 : 0}px)`,
+      position: 'fixed', top: 16, left: '50%', zIndex: 50,
+      transform: `translateX(calc(-50% + ${wikiOpen ? -90 : 0}px))`,
       transition: 'transform 0.32s cubic-bezier(0.22,1,0.36,1)',
     }}>
       <DeviceStatusBar
@@ -188,25 +188,27 @@ export default function App() {
         onSwitchToDesktop={() => setMode('desktop')}
         signOut={signOut}
       />
-      <div style={{
-        position: 'relative',
-        transform: `translateY(${liveTranslateY}px) scale(${liveScale})`,
-        opacity: liveOpacity,
-        transformOrigin: 'center bottom',
-        transition: dragging ? 'none' : 'transform 0.32s cubic-bezier(0.22,1,0.36,1), opacity 0.32s ease',
-        userSelect: dragging ? 'none' : 'auto',
-        WebkitUserSelect: dragging ? 'none' : 'auto',
-        '--accent':        phoneTheme?.color ?? '#b96eff',
-        '--grad':          phoneTheme ? `linear-gradient(135deg, ${phoneTheme.color}, #7b9fff)` : 'linear-gradient(135deg, #b96eff, #7b9fff)',
-        '--phone-bg':      phoneTheme?.bg ?? '#080808',
-        '--phone-radius':  phoneTheme ? `${phoneTheme.border_radius}px` : '48px',
-        '--phone-glow':    phoneTheme ? `${phoneTheme.color}22` : 'rgba(185,110,255,0.07)',
-        '--phone-shell':   phoneTheme?.shell ?? '#0c0c0c',
-        '--phone-shell-2': phoneTheme?.shell ? phoneTheme.shell + '88' : 'rgba(255,255,255,0.05)',
-        '--phone-border':  phoneTheme ? `${phoneTheme.color}33` : 'rgba(255,255,255,0.1)',
-        '--app-origin':    appOrigin ? `${appOrigin.x}px ${appOrigin.y}px` : '50% 100%',
-        ...frameVars,
-      }}>
+    </div>
+
+    <div style={{
+      position: 'relative',
+      transform: `translateY(${liveTranslateY}px) translateX(${wikiOpen ? -90 : 0}px) scale(${liveScale})`,
+      opacity: liveOpacity,
+      transformOrigin: 'center bottom',
+      transition: dragging ? 'none' : 'transform 0.32s cubic-bezier(0.22,1,0.36,1), opacity 0.32s ease',
+      userSelect: dragging ? 'none' : 'auto',
+      WebkitUserSelect: dragging ? 'none' : 'auto',
+      '--accent':        phoneTheme?.color ?? '#b96eff',
+      '--grad':          phoneTheme ? `linear-gradient(135deg, ${phoneTheme.color}, #7b9fff)` : 'linear-gradient(135deg, #b96eff, #7b9fff)',
+      '--phone-bg':      phoneTheme?.bg ?? '#080808',
+      '--phone-radius':  phoneTheme ? `${phoneTheme.border_radius}px` : '48px',
+      '--phone-glow':    phoneTheme ? `${phoneTheme.color}22` : 'rgba(185,110,255,0.07)',
+      '--phone-shell':   phoneTheme?.shell ?? '#0c0c0c',
+      '--phone-shell-2': phoneTheme?.shell ? phoneTheme.shell + '88' : 'rgba(255,255,255,0.05)',
+      '--phone-border':  phoneTheme ? `${phoneTheme.color}33` : 'rgba(255,255,255,0.1)',
+      '--app-origin':    appOrigin ? `${appOrigin.x}px ${appOrigin.y}px` : '50% 100%',
+      ...frameVars,
+    }}>
       {/* Aperçu de l'accueil qui se révèle en dessous pendant le geste de sortie */}
       {dragY > 0 && currentScreen !== 'home' && (
         <div style={{
@@ -268,7 +270,6 @@ export default function App() {
           }} />
         </div>
       )}
-      </div>
     </div>
 
     {wikiOpen && <WikiPanel onClose={() => setWikiOpen(false)} />}
