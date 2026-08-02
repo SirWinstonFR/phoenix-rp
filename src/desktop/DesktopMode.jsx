@@ -4,6 +4,8 @@ import Avatar from '../components/Avatar'
 import Clock from '../components/Clock'
 import DesktopWindow from './DesktopWindow'
 import DesktopBootScreen from './DesktopBootScreen'
+import DesktopLoginScreen from './DesktopLoginScreen'
+import DesktopLoadingScreen from './DesktopLoadingScreen'
 import { ALL_APPS } from '../constants/apps'
 import InstaGrimScreen from '../screens/InstaGrimScreen'
 import MapScreen from '../screens/MapScreen'
@@ -23,7 +25,7 @@ let nextZ = 100
 
 export default function DesktopMode({ onSwitchToPhone }) {
   const { profile, signOut } = useAuth()
-  const [booted, setBooted] = useState(false)
+  const [stage, setStage] = useState('boot') // boot → login → loading → desktop
   const [windows, setWindows]   = useState([])
   const [showStart, setShowStart] = useState(false)
 
@@ -134,8 +136,14 @@ export default function DesktopMode({ onSwitchToPhone }) {
     return () => window.removeEventListener('click', close)
   }, [showStart])
 
-  if (!booted) {
-    return <DesktopBootScreen onFinish={() => setBooted(true)} />
+  if (stage === 'boot') {
+    return <DesktopBootScreen onFinish={() => setStage('login')} />
+  }
+  if (stage === 'login') {
+    return <DesktopLoginScreen profile={profile} onFinish={() => setStage('loading')} />
+  }
+  if (stage === 'loading') {
+    return <DesktopLoadingScreen onFinish={() => setStage('desktop')} />
   }
 
   const today = new Date().toLocaleDateString('fr-FR', {
@@ -155,6 +163,7 @@ export default function DesktopMode({ onSwitchToPhone }) {
               key={app.id}
               className="desktop-icon"
               onDoubleClick={() => openApp(app.id)}
+              style={{ animation: `desktopIconIn 0.35s cubic-bezier(0.22,1,0.36,1) ${i * 0.045}s both` }}
             >
               <div className="desktop-icon-img" style={{ background: app.bg }}>
                 {app.img
@@ -166,6 +175,12 @@ export default function DesktopMode({ onSwitchToPhone }) {
             </div>
           ))}
         </div>
+        <style>{`
+          @keyframes desktopIconIn {
+            from { opacity: 0; transform: translateY(10px) scale(0.9); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
+          }
+        `}</style>
 
         {/* Fenêtres */}
         {windows.map(win => (
