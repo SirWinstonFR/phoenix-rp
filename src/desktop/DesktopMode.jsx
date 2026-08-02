@@ -30,10 +30,6 @@ export default function DesktopMode({ onSwitchToPhone }) {
   const isMJ = profile?.discord_id === MJ_DISCORD_ID
   const APPS = ALL_APPS.filter(a => a.id !== 'mjpanel' || isMJ)
 
-  if (!booted) {
-    return <DesktopBootScreen onFinish={() => setBooted(true)} />
-  }
-
   function openApp(appId) {
     setShowStart(false)
     const existing = windows.find(w => w.id === appId)
@@ -137,6 +133,10 @@ export default function DesktopMode({ onSwitchToPhone }) {
     setTimeout(() => window.addEventListener('click', close), 100)
     return () => window.removeEventListener('click', close)
   }, [showStart])
+
+  if (!booted) {
+    return <DesktopBootScreen onFinish={() => setBooted(true)} />
+  }
 
   const today = new Date().toLocaleDateString('fr-FR', {
     day: '2-digit', month: '2-digit', year: '2-digit'
