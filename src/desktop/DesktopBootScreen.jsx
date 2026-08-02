@@ -38,19 +38,15 @@ export default function DesktopBootScreen({ onFinish }) {
 
       {/* Logo */}
       <div style={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
-        <div style={{
-          fontSize: 44, marginBottom: 14,
-          filter: 'drop-shadow(0 0 20px rgba(185,110,255,0.5))',
-          animation: 'bootLogoIn 0.6s cubic-bezier(0.22,1,0.36,1) both',
-        }}>🔥</div>
-        <p style={{
-          fontSize: 22, fontWeight: 800, letterSpacing: '0.08em',
-          background: 'linear-gradient(135deg, #b96eff, #7b9fff)',
-          WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-          animation: 'bootLogoIn 0.6s cubic-bezier(0.22,1,0.36,1) 0.1s both',
-        }}>
-          PHOENIX<span style={{ fontWeight: 400, opacity: 0.7 }}> OS</span>
-        </p>
+        <img
+          src="/phoenix-os-logo.png"
+          alt="Phoenix OS"
+          style={{
+            width: 120, height: 'auto', marginBottom: 6,
+            filter: 'drop-shadow(0 0 24px rgba(185,110,255,0.4))',
+            animation: 'bootLogoIn 0.6s cubic-bezier(0.22,1,0.36,1) both',
+          }}
+        />
       </div>
 
       {/* Barre de progression */}
