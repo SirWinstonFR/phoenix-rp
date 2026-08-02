@@ -3,29 +3,36 @@ import { useAuth } from '../context/AuthContext'
 import Avatar from '../components/Avatar'
 import Clock from '../components/Clock'
 import DesktopWindow from './DesktopWindow'
+import DesktopBootScreen from './DesktopBootScreen'
+import { ALL_APPS } from '../constants/apps'
 import InstaGrimScreen from '../screens/InstaGrimScreen'
 import MapScreen from '../screens/MapScreen'
 import './desktop.css'
 
 import CrushScreen from '../screens/CrushScreen'
 import IDScreen from '../screens/IDScreen'
+import StoreScreen from '../screens/StoreScreen'
+import BankScreen from '../screens/BankScreen'
+import DarkWebScreen from '../screens/DarkWebScreen'
+import ProfileCardScreen from '../screens/ProfileCardScreen'
+import MJDashboardScreen from '../screens/MJDashboardScreen'
 
-const APPS = [
-  { id: 'messages',  label: 'Messages',  icon: '💬', bg: 'linear-gradient(135deg,#1a1a3e,#0d1a2e)' },
-  { id: 'instagrim', label: 'Capture',   icon: null,  img: '/capture.png', bg: 'transparent' },
-  { id: 'map',       label: 'Carte',     icon: '🗺️', bg: 'linear-gradient(135deg,#0a1f2e,#0d2a1a)' },
-  { id: 'crush',     label: 'Crush',     icon: '💘', bg: 'linear-gradient(135deg,#3d0020,#1a000f)' },
-  { id: 'id',        label: 'ID Card',   icon: '🪪', bg: 'linear-gradient(135deg,#0a2a6e,#1a4aae)' },
-  { id: 'notes',     label: 'Notes',     icon: '📝', bg: 'linear-gradient(135deg,#1f1a0a,#2a2210)' },
-  { id: 'settings',  label: 'Réglages',  icon: '⚙️', bg: 'linear-gradient(135deg,#1a1a1a,#222)' },
-]
+const MJ_DISCORD_ID = '804959890291294209'
 
 let nextZ = 100
 
 export default function DesktopMode({ onSwitchToPhone }) {
   const { profile, signOut } = useAuth()
+  const [booted, setBooted] = useState(false)
   const [windows, setWindows]   = useState([])
   const [showStart, setShowStart] = useState(false)
+
+  const isMJ = profile?.discord_id === MJ_DISCORD_ID
+  const APPS = ALL_APPS.filter(a => a.id !== 'mjpanel' || isMJ)
+
+  if (!booted) {
+    return <DesktopBootScreen onFinish={() => setBooted(true)} />
+  }
 
   function openApp(appId) {
     setShowStart(false)
@@ -98,6 +105,16 @@ export default function DesktopMode({ onSwitchToPhone }) {
         return <CrushScreen onBack={() => closeWindow(win.id)} />
       case 'id':
         return <IDScreen onBack={() => closeWindow(win.id)} />
+      case 'store':
+        return <StoreScreen onBack={() => closeWindow(win.id)} />
+      case 'bank':
+        return <BankScreen onBack={() => closeWindow(win.id)} />
+      case 'darkweb':
+        return <DarkWebScreen onBack={() => closeWindow(win.id)} />
+      case 'card':
+        return <ProfileCardScreen onBack={() => closeWindow(win.id)} />
+      case 'mjpanel':
+        return <MJDashboardScreen onBack={() => closeWindow(win.id)} />
       default:
         return (
           <div style={{
