@@ -15,13 +15,13 @@ export default function DesktopLoginScreen({ profile, onFinish }) {
         }
         return d + 1
       })
-    }, 90)
+    }, 190)
     return () => clearInterval(typing)
   }, [])
 
   useEffect(() => {
     if (dots < MAX_DOTS) return
-    const t = setTimeout(onFinish, 500)
+    const t = setTimeout(onFinish, 750)
     return () => clearTimeout(t)
   }, [dots])
 
@@ -55,13 +55,14 @@ export default function DesktopLoginScreen({ profile, onFinish }) {
       {/* Avatar + nom */}
       <div style={{ textAlign: 'center', position: 'relative', zIndex: 1, animation: 'loginPop 0.5s cubic-bezier(0.22,1,0.36,1) 0.15s both' }}>
         <div style={{
-          width: 88, height: 88, borderRadius: '50%', margin: '0 auto 14px',
-          padding: 3, background: 'linear-gradient(135deg, #b96eff, #7b9fff)',
+          display: 'inline-block', borderRadius: '50%', marginBottom: 14,
           boxShadow: '0 0 30px rgba(185,110,255,0.35)',
         }}>
-          <div style={{ width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', border: '3px solid #0a0a12' }}>
-            <Avatar profile={profile} size={82} />
-          </div>
+          <Avatar
+            profile={profile}
+            size={88}
+            style={{ background: 'linear-gradient(135deg, #b96eff, #7b9fff)' }}
+          />
         </div>
         <p style={{ fontSize: 19, fontWeight: 700, color: '#fff' }}>
           {profile?.username ?? 'Utilisateur'}
