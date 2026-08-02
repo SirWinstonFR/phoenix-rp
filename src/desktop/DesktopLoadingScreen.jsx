@@ -13,7 +13,11 @@ export default function DesktopLoadingScreen({ onFinish }) {
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
       gap: 18, fontFamily: 'Inter, sans-serif',
     }}>
-      <div className="spinner" style={{ width: 34, height: 34 }} />
+      <img
+        src="/chargement-desktop.gif"
+        alt="Chargement"
+        style={{ width: 64, height: 64, objectFit: 'contain' }}
+      />
       <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.02em' }}>
         Ouverture de la session…
       </p>
