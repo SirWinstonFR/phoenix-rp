@@ -10,8 +10,8 @@ const MJ_DISCORD_ID = '804959890291294209'
 
 const STORAGE_KEY = 'rp_app_order'
 
-export default function HomeScreen({ onOpenApp, onSwitchToDesktop, onOpenWiki, phoneTheme }) {
-  const { profile, signOut, characters = [], switchCharacter } = useAuth()
+export default function HomeScreen({ onOpenApp, phoneTheme }) {
+  const { profile } = useAuth()
   const unlockedApps = profile?.unlocked_apps ?? ['messages', 'phone', 'instagrim', 'map', 'crush', 'id', 'store', 'bank', 'card']
   const isMJ = profile?.discord_id === MJ_DISCORD_ID
 
@@ -132,50 +132,6 @@ export default function HomeScreen({ onOpenApp, onSwitchToDesktop, onOpenWiki, p
         <div className="home-time">
           <Clock big />
           <p className="home-date">{dateStr} · {location}</p>
-        </div>
-
-        {/* Barre profil */}
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 10,
-          margin: '0 14px 4px', padding: '8px 12px',
-          background: 'var(--glass)', border: '1px solid var(--border)',
-          borderRadius: 16, backdropFilter: 'blur(10px)',
-        }}>
-          <Avatar profile={profile} size={32} />
-          <div style={{ flex: 1 }}>
-            <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--t1)', lineHeight: 1.2 }}>
-              {profile?.username ?? 'Joueur'}
-            </p>
-            {profile?.location && (
-              <p style={{ fontSize: 11, color: 'var(--t3)' }}>📍 {profile.location}</p>
-            )}
-          </div>
-          {characters.length > 1 && (
-            <button onClick={switchCharacter} style={{
-              background: 'rgba(123,159,255,0.1)', border: '1px solid rgba(123,159,255,0.2)',
-              borderRadius: 10, padding: '6px 10px', fontSize: 11, fontWeight: 700,
-              color: '#7b9fff', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
-            }}>👥</button>
-          )}
-          {onOpenWiki && (
-            <button onClick={onOpenWiki} style={{
-              background: 'rgba(232,117,44,0.1)', border: '1px solid rgba(232,117,44,0.2)',
-              borderRadius: 10, padding: '6px 10px', fontSize: 11, fontWeight: 700,
-              color: '#f5a052', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
-            }}>❓</button>
-          )}
-          {onSwitchToDesktop && (
-            <button onClick={onSwitchToDesktop} style={{
-              background: 'rgba(185,110,255,0.1)', border: '1px solid rgba(185,110,255,0.2)',
-              borderRadius: 10, padding: '6px 10px', fontSize: 11, fontWeight: 700,
-              color: 'var(--accent)', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
-            }}>🖥️</button>
-          )}
-          <button onClick={signOut} style={{
-            background: 'rgba(255,82,82,0.1)', border: '1px solid rgba(255,82,82,0.2)',
-            borderRadius: 10, padding: '6px 10px', fontSize: 11, fontWeight: 700,
-            color: '#ff5252', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
-          }}>🔒</button>
         </div>
 
         {/* Indication mode édition */}
