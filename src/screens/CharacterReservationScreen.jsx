@@ -11,7 +11,7 @@ const VIEWPORT = 200 // taille du cadre circulaire de positionnement (px)
 const EXPORT_SIZE = 480 // résolution de l'image carrée exportée
 
 export default function CharacterReservationScreen({ onDone, onCancel }) {
-  const { reserveCharacter } = useAuth()
+  const { reserveCharacter, signOut } = useAuth()
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName]   = useState('')
   const [jobWish, setJobWish]     = useState('')
@@ -364,14 +364,22 @@ export default function CharacterReservationScreen({ onDone, onCancel }) {
           </button>
         </div>
 
-        {onCancel && (
-          <button onClick={onCancel} style={{
+        <div style={{ display: 'flex', gap: 16, justifyContent: 'center' }}>
+          {onCancel && (
+            <button onClick={onCancel} style={{
+              background: 'none', border: 'none', color: 'rgba(245,242,238,0.3)',
+              fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
+            }}>
+              ← Retour
+            </button>
+          )}
+          <button onClick={signOut} style={{
             background: 'none', border: 'none', color: 'rgba(245,242,238,0.3)',
-            fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', alignSelf: 'center',
+            fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
           }}>
-            ← Retour
+            Se déconnecter
           </button>
-        )}
+        </div>
       </div>
     </div>
   )
