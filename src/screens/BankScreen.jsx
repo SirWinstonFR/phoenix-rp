@@ -12,6 +12,8 @@ export default function BankScreen({ onBack, onOpenApp }) {
   const { user, profile, updateProfile } = useAuth()
   const [faceIdPassed, setFaceIdPassed] = useState(false)
   const [showCardView, setShowCardView] = useState(false)
+  const [showChartView, setShowChartView] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
   const [view, setView]           = useState('home') // 'home' | 'send' | 'savings' | 'mj-panel' | 'request' | 'receive'
   const [transactions, setTransactions] = useState([])
   const [loading, setLoading]     = useState(true)
@@ -844,10 +846,52 @@ export default function BankScreen({ onBack, onOpenApp }) {
       <StatusBar />
       <div className="screen" style={{ background: 'linear-gradient(180deg, #0a0a14 0%, #050508 100%)' }}>
 
-        <div className="app-header" style={{ background: 'transparent', border: 'none' }}>
-          <button className="icon-btn" onClick={onBack}>←</button>
-          <span className="app-header-title">💳 {BANK_NAME}</span>
-          {isMJ ? <button className="icon-btn" onClick={() => setView('mj-panel')}>⚙️</button> : <span style={{ width: 32 }} />}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '14px 16px 10px' }}>
+          <button onClick={onBack} style={{
+            background: 'none', border: 'none', color: 'var(--t3)',
+            fontSize: 15, cursor: 'pointer', padding: 0, flexShrink: 0,
+          }}>←</button>
+
+          <Avatar profile={profile} size={32} />
+
+          <div style={{
+            flex: 1, display: 'flex', alignItems: 'center', gap: 7,
+            background: 'rgba(255,255,255,0.06)', borderRadius: 20,
+            padding: '8px 13px', minWidth: 0,
+          }}>
+            <span style={{ fontSize: 12, color: 'var(--t3)', flexShrink: 0 }}>🔍</span>
+            <input
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Rechercher une dépense"
+              style={{
+                flex: 1, minWidth: 0, background: 'none', border: 'none', outline: 'none',
+                color: 'var(--t1)', fontSize: 12.5, fontFamily: 'inherit',
+              }}
+            />
+          </div>
+
+          <button onClick={() => setShowChartView(v => !v)} style={{
+            width: 34, height: 34, borderRadius: '50%', flexShrink: 0,
+            background: showChartView ? 'var(--accent)' : 'rgba(255,255,255,0.08)',
+            border: 'none', color: showChartView ? '#fff' : 'var(--t2)',
+            fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>📊</button>
+
+          <button onClick={() => setShowCardView(v => !v)} style={{
+            width: 34, height: 34, borderRadius: '50%', flexShrink: 0,
+            background: showCardView ? 'var(--accent)' : 'rgba(255,255,255,0.08)',
+            border: 'none', color: showCardView ? '#fff' : 'var(--t2)',
+            fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>💳</button>
+
+          {isMJ && (
+            <button onClick={() => setView('mj-panel')} style={{
+              width: 34, height: 34, borderRadius: '50%', flexShrink: 0,
+              background: 'rgba(255,255,255,0.08)', border: 'none', color: 'var(--t2)',
+              fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>⚙️</button>
+          )}
         </div>
 
         <div style={{ flex: 1, overflowY: 'auto', scrollbarWidth: 'none' }}>
@@ -933,21 +977,8 @@ export default function BankScreen({ onBack, onOpenApp }) {
             </div>
           )}
 
-          {/* Bouton discret pour révéler/masquer la carte */}
-          <div style={{ display: 'flex', justifyContent: 'center', padding: showCardView ? '0 20px 4px' : '18px 20px 4px' }}>
-            <button onClick={() => setShowCardView(v => !v)} style={{
-              display: 'flex', alignItems: 'center', gap: 7,
-              background: 'var(--glass)', border: '1px solid var(--border)',
-              borderRadius: 20, padding: '8px 16px',
-              fontSize: 12, fontWeight: 700, color: 'var(--t2)',
-              cursor: 'pointer', fontFamily: 'inherit',
-            }}>
-              💳 {showCardView ? 'Masquer la carte' : 'Voir ma carte'}
-            </button>
-          </div>
-
           {/* SOLDE */}
-          <div style={{ textAlign: 'center', padding: '10px 20px 8px' }}>
+          <div style={{ textAlign: 'center', padding: '14px 20px 8px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 4 }}>
               <p style={{ fontSize: 12, color: 'var(--t3)' }}>Solde disponible</p>
               <button onClick={() => setShowBalance(!showBalance)} style={{ background: 'none', border: 'none', color: 'var(--t3)', fontSize: 12, cursor: 'pointer' }}>
@@ -964,10 +995,12 @@ export default function BankScreen({ onBack, onOpenApp }) {
             )}
           </div>
 
-          {/* Sparkline évolution */}
-          <div style={{ padding: '0 20px 20px' }}>
-            <Sparkline transactions={transactions} currentBalance={balance} userId={profile.id} />
-          </div>
+          {/* Graphique — visible uniquement si demandé */}
+          {showChartView && (
+            <div style={{ padding: '0 20px 20px', animation: 'fadeDown 0.25s ease' }}>
+              <Sparkline transactions={transactions} currentBalance={balance} userId={profile.id} />
+            </div>
+          )}
 
           {/* ACTIONS — simplifiées, un seul ton */}
           <div style={{ display: 'flex', gap: 10, padding: '0 20px 20px', overflowX: 'auto', scrollbarWidth: 'none' }}>
@@ -1057,7 +1090,13 @@ export default function BankScreen({ onBack, onOpenApp }) {
               const filteredTx = transactions.filter(t => {
                 if (historyFilter === 'all') return true
                 const isSender = t.from_user_id === profile.id
-                return historyFilter === 'sent' ? isSender : !isSender
+                if (historyFilter === 'sent' ? !isSender : isSender) return false
+                return true
+              }).filter(t => {
+                if (!searchQuery.trim()) return true
+                const q = searchQuery.trim().toLowerCase()
+                const otherName = (t.from_user_id === profile.id ? t.toProfile : t.fromProfile)?.username ?? ''
+                return (t.note ?? '').toLowerCase().includes(q) || otherName.toLowerCase().includes(q)
               })
               if (filteredTx.length === 0) return (
                 <div style={{ textAlign: 'center', padding: '30px 16px', color: 'var(--t3)' }}>
