@@ -10,6 +10,8 @@ const BANK_NAME = 'Desert Valley Bank'
 
 export default function BankScreen({ onBack, onOpenApp }) {
   const { user, profile, updateProfile } = useAuth()
+  const [faceIdPassed, setFaceIdPassed] = useState(false)
+  const [showCardView, setShowCardView] = useState(false)
   const [view, setView]           = useState('home') // 'home' | 'send' | 'savings' | 'mj-panel' | 'request' | 'receive'
   const [transactions, setTransactions] = useState([])
   const [loading, setLoading]     = useState(true)
@@ -277,6 +279,11 @@ export default function BankScreen({ onBack, onOpenApp }) {
   // Numéro de carte 100% numérique généré depuis l'user id
   const cardDigits = (user?.id ?? '0000000000000000').replace(/[^0-9]/g, '').padEnd(16, '4').slice(0, 16)
   const cardNumber = cardDigits.match(/.{1,4}/g).join(' ')
+
+  // ── SCAN FACE ID — bloque tout le reste tant qu'il n'est pas passé ──
+  if (!faceIdPassed) {
+    return <FaceIdGate profile={profile} onDone={() => setFaceIdPassed(true)} />
+  }
 
   // ── VUE BOURSE (intégrée) ──
   if (view === 'invest') {
@@ -845,87 +852,102 @@ export default function BankScreen({ onBack, onOpenApp }) {
 
         <div style={{ flex: 1, overflowY: 'auto', scrollbarWidth: 'none' }}>
 
-          {/* CARTE */}
-          <div style={{ padding: '10px 20px 20px', display: 'flex', justifyContent: 'center' }}>
-            <div onClick={() => setCardFlipped(f => !f)} style={{ width: '100%', maxWidth: 280, perspective: 1000, cursor: 'pointer' }}>
-              <div style={{
-                position: 'relative', transformStyle: 'preserve-3d',
-                transition: 'transform 0.6s cubic-bezier(0.22,1,0.36,1)',
-                transform: cardFlipped ? 'rotateY(180deg)' : 'rotateY(0)',
-                height: 175,
-              }}>
-                {/* RECTO */}
+          {/* CARTE — visible uniquement si demandée */}
+          {showCardView && (
+            <div style={{ padding: '10px 20px 8px', display: 'flex', justifyContent: 'center', animation: 'fadeDown 0.25s ease' }}>
+              <div onClick={() => setCardFlipped(f => !f)} style={{ width: '100%', maxWidth: 280, perspective: 1000, cursor: 'pointer' }}>
                 <div style={{
-                  position: 'absolute', inset: 0,
-                  backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
-                  borderRadius: 20, padding: '20px 22px',
-                  background: 'linear-gradient(135deg, #1a1a2e 0%, #0d0d18 60%, #000 100%)',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  boxShadow: '0 20px 50px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06)',
-                  display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-                  overflow: 'hidden',
+                  position: 'relative', transformStyle: 'preserve-3d',
+                  transition: 'transform 0.6s cubic-bezier(0.22,1,0.36,1)',
+                  transform: cardFlipped ? 'rotateY(180deg)' : 'rotateY(0)',
+                  height: 175,
                 }}>
-                  <div style={{ position: 'absolute', top: -40, right: -40, width: 160, height: 160, borderRadius: '50%', background: 'radial-gradient(circle, rgba(185,110,255,0.15), transparent 70%)' }} />
+                  {/* RECTO */}
+                  <div style={{
+                    position: 'absolute', inset: 0,
+                    backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
+                    borderRadius: 20, padding: '20px 22px',
+                    background: 'linear-gradient(135deg, #1a1a2e 0%, #0d0d18 60%, #000 100%)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    boxShadow: '0 20px 50px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06)',
+                    display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+                    overflow: 'hidden',
+                  }}>
+                    <div style={{ position: 'absolute', top: -40, right: -40, width: 160, height: 160, borderRadius: '50%', background: 'radial-gradient(circle, rgba(185,110,255,0.15), transparent 70%)' }} />
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', zIndex: 1 }}>
-                    <p style={{
-                      fontSize: 13, fontWeight: 800, letterSpacing: -0.3,
-                      background: 'linear-gradient(135deg, #b96eff, #7b9fff)',
-                      WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-                    }}>{BANK_NAME}</p>
-                    <span style={{ fontSize: 20 }}>💳</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', zIndex: 1 }}>
+                      <p style={{
+                        fontSize: 13, fontWeight: 800, letterSpacing: -0.3,
+                        background: 'linear-gradient(135deg, #b96eff, #7b9fff)',
+                        WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                      }}>{BANK_NAME}</p>
+                      <span style={{ fontSize: 20 }}>💳</span>
+                    </div>
+
+                    <div style={{ zIndex: 1 }}>
+                      <p style={{
+                        fontSize: 16, fontFamily: "'Space Grotesk', monospace", letterSpacing: 3, fontWeight: 600,
+                        color: 'rgba(255,255,255,0.85)', marginBottom: 10,
+                      }}>{showBalance ? cardNumber : '•••• •••• •••• ••••'}</p>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                        <div>
+                          <p style={{ fontSize: 8, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.1em', marginBottom: 2 }}>CARD HOLDER</p>
+                          <p style={{ fontSize: 12, fontWeight: 700, color: '#fff', letterSpacing: 0.5 }}>
+                            {profile?.username?.toUpperCase() ?? '—'}
+                          </p>
+                        </div>
+                        <p style={{ fontSize: 16, fontWeight: 900, fontStyle: 'italic', color: 'rgba(255,255,255,0.5)' }}>VISA</p>
+                      </div>
+                    </div>
                   </div>
 
-                  <div style={{ zIndex: 1 }}>
-                    <p style={{
-                      fontSize: 16, fontFamily: "'Space Grotesk', monospace", letterSpacing: 3, fontWeight: 600,
-                      color: 'rgba(255,255,255,0.85)', marginBottom: 10,
-                    }}>{showBalance ? cardNumber : '•••• •••• •••• ••••'}</p>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                      <div>
-                        <p style={{ fontSize: 8, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.1em', marginBottom: 2 }}>CARD HOLDER</p>
-                        <p style={{ fontSize: 12, fontWeight: 700, color: '#fff', letterSpacing: 0.5 }}>
-                          {profile?.username?.toUpperCase() ?? '—'}
+                  {/* VERSO */}
+                  <div style={{
+                    position: 'absolute', inset: 0,
+                    backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
+                    transform: 'rotateY(180deg)',
+                    borderRadius: 20,
+                    background: 'linear-gradient(135deg, #1a1a2e 0%, #0d0d18 60%, #000 100%)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    boxShadow: '0 20px 50px rgba(0,0,0,0.6)',
+                    display: 'flex', flexDirection: 'column',
+                  }}>
+                    <div style={{ height: 36, background: '#111', marginTop: 18 }} />
+                    <div style={{ padding: '16px 22px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      <div style={{
+                        height: 28, background: 'rgba(255,255,255,0.9)', borderRadius: 4,
+                        display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 10px',
+                      }}>
+                        <p style={{ fontSize: 11, fontFamily: 'monospace', color: '#111', fontWeight: 700 }}>
+                          {cardDigits.slice(-3)}
                         </p>
                       </div>
-                      <p style={{ fontSize: 16, fontWeight: 900, fontStyle: 'italic', color: 'rgba(255,255,255,0.5)' }}>VISA</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* VERSO */}
-                <div style={{
-                  position: 'absolute', inset: 0,
-                  backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
-                  transform: 'rotateY(180deg)',
-                  borderRadius: 20,
-                  background: 'linear-gradient(135deg, #1a1a2e 0%, #0d0d18 60%, #000 100%)',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  boxShadow: '0 20px 50px rgba(0,0,0,0.6)',
-                  display: 'flex', flexDirection: 'column',
-                }}>
-                  <div style={{ height: 36, background: '#111', marginTop: 18 }} />
-                  <div style={{ padding: '16px 22px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    <div style={{
-                      height: 28, background: 'rgba(255,255,255,0.9)', borderRadius: 4,
-                      display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 10px',
-                    }}>
-                      <p style={{ fontSize: 11, fontFamily: 'monospace', color: '#111', fontWeight: 700 }}>
-                        {cardDigits.slice(-3)}
+                      <p style={{ fontSize: 8, color: 'rgba(255,255,255,0.3)', lineHeight: 1.6 }}>
+                        This card is property of {BANK_NAME}. Use of this card is subject to the terms of the cardholder agreement.
                       </p>
                     </div>
-                    <p style={{ fontSize: 8, color: 'rgba(255,255,255,0.3)', lineHeight: 1.6 }}>
-                      This card is property of {BANK_NAME}. Use of this card is subject to the terms of the cardholder agreement.
-                    </p>
                   </div>
                 </div>
               </div>
             </div>
+          )}
+
+          {/* Bouton discret pour révéler/masquer la carte */}
+          <div style={{ display: 'flex', justifyContent: 'center', padding: showCardView ? '0 20px 4px' : '18px 20px 4px' }}>
+            <button onClick={() => setShowCardView(v => !v)} style={{
+              display: 'flex', alignItems: 'center', gap: 7,
+              background: 'var(--glass)', border: '1px solid var(--border)',
+              borderRadius: 20, padding: '8px 16px',
+              fontSize: 12, fontWeight: 700, color: 'var(--t2)',
+              cursor: 'pointer', fontFamily: 'inherit',
+            }}>
+              💳 {showCardView ? 'Masquer la carte' : 'Voir ma carte'}
+            </button>
           </div>
 
           {/* SOLDE */}
-          <div style={{ textAlign: 'center', padding: '0 20px 8px' }}>
+          <div style={{ textAlign: 'center', padding: '10px 20px 8px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 4 }}>
               <p style={{ fontSize: 12, color: 'var(--t3)' }}>Solde disponible</p>
               <button onClick={() => setShowBalance(!showBalance)} style={{ background: 'none', border: 'none', color: 'var(--t3)', fontSize: 12, cursor: 'pointer' }}>
@@ -947,31 +969,30 @@ export default function BankScreen({ onBack, onOpenApp }) {
             <Sparkline transactions={transactions} currentBalance={balance} userId={profile.id} />
           </div>
 
-          {/* ACTIONS — design premium */}
-          <div style={{ display: 'flex', gap: 12, padding: '0 20px 20px', overflowX: 'auto', scrollbarWidth: 'none' }}>
+          {/* ACTIONS — simplifiées, un seul ton */}
+          <div style={{ display: 'flex', gap: 10, padding: '0 20px 20px', overflowX: 'auto', scrollbarWidth: 'none' }}>
             {[
-              { icon: '↗️', label: 'Envoyer',  action: () => setView('send'), grad: 'linear-gradient(135deg, #b96eff, #7b9fff)' },
-              { icon: '📷', label: 'Recevoir', action: () => setView('receive'), grad: 'linear-gradient(135deg, #4dd9ff, #2563eb)' },
-              { icon: '🙋', label: 'Demander', action: () => setView('request'), grad: 'linear-gradient(135deg, #f59e0b, #d97706)' },
-              { icon: '🏦', label: 'Épargne',  action: () => setView('savings'), grad: 'linear-gradient(135deg, #22c55e, #16a34a)' },
-              { icon: '📊', label: 'Bourse',   action: () => setView('invest'), grad: 'linear-gradient(135deg, #ec4899, #db2777)' },
+              { icon: '↗️', label: 'Envoyer',  action: () => setView('send') },
+              { icon: '📷', label: 'Recevoir', action: () => setView('receive') },
+              { icon: '🙋', label: 'Demander', action: () => setView('request') },
+              { icon: '🏦', label: 'Épargne',  action: () => setView('savings') },
+              { icon: '📊', label: 'Bourse',   action: () => setView('invest') },
             ].map(a => (
               <button key={a.label} onClick={a.action} style={{
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7,
                 background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                flexShrink: 0, width: 54,
+                flexShrink: 0, width: 56,
               }}>
                 <div style={{
-                  width: 48, height: 48, borderRadius: 16,
-                  background: a.grad,
+                  width: 48, height: 48, borderRadius: '50%',
+                  background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 18, transition: 'transform 0.15s, box-shadow 0.15s',
-                  boxShadow: '0 6px 18px rgba(0,0,0,0.3)',
+                  fontSize: 18, transition: 'background 0.15s',
                 }}
-                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px) scale(1.05)' }}
-                  onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0) scale(1)' }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
                 >{a.icon}</div>
-                <span style={{ fontSize: 10, color: 'var(--t2)', fontWeight: 700 }}>{a.label}</span>
+                <span style={{ fontSize: 11, color: 'var(--t2)', fontWeight: 600 }}>{a.label}</span>
               </button>
             ))}
           </div>
@@ -1206,4 +1227,66 @@ function timeAgo(dateStr) {
   if (diff < 3600)  return `il y a ${Math.floor(diff / 60)}min`
   if (diff < 86400) return `il y a ${Math.floor(diff / 3600)}h`
   return `il y a ${Math.floor(diff / 86400)}j`
+}
+
+// Faux scan Face ID à l'ouverture de l'appli — purement visuel, se valide tout seul
+function FaceIdGate({ profile, onDone }) {
+  const [verified, setVerified] = useState(false)
+
+  useEffect(() => {
+    const t1 = setTimeout(() => setVerified(true), 1300)
+    const t2 = setTimeout(onDone, 2100)
+    return () => { clearTimeout(t1); clearTimeout(t2) }
+  }, [])
+
+  return (
+    <div className="phone">
+      <div style={{
+        flex: 1, display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', gap: 26,
+        background: 'linear-gradient(160deg, #0d1220 0%, #1a2a5e 45%, #0a0e1a 100%)',
+        position: 'relative', overflow: 'hidden',
+      }}>
+        <div style={{
+          position: 'absolute', top: '35%', left: '50%', transform: 'translate(-50%,-50%)',
+          width: 300, height: 300, borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(77,217,255,0.15) 0%, transparent 70%)',
+        }} />
+
+        {/* Icône Face ID */}
+        <div style={{
+          width: 82, height: 82, borderRadius: 22,
+          background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(255,255,255,0.1)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          position: 'relative', zIndex: 1,
+          boxShadow: verified ? '0 0 24px rgba(74,222,128,0.4)' : '0 0 20px rgba(77,217,255,0.25)',
+          transition: 'box-shadow 0.4s ease',
+        }}>
+          {verified ? (
+            <span style={{ fontSize: 34, color: '#4ade80', animation: 'faceIdPop 0.35s cubic-bezier(0.22,1,0.36,1)' }}>✓</span>
+          ) : (
+            <div style={{
+              width: 40, height: 40, borderRadius: '50%',
+              border: '2.5px solid rgba(77,217,255,0.5)',
+              borderTopColor: '#4dd9ff',
+              animation: 'faceIdSpin 0.9s linear infinite',
+            }} />
+          )}
+        </div>
+
+        {/* Avatar + salutation */}
+        <div style={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
+          <Avatar profile={profile} size={54} style={{ margin: '0 auto 12px' }} />
+          <p style={{ fontSize: 17, fontWeight: 700, color: '#fff' }}>
+            {verified ? `Bonjour, ${profile?.username ?? ''}` : 'Reconnaissance en cours…'}
+          </p>
+        </div>
+
+        <style>{`
+          @keyframes faceIdSpin { to { transform: rotate(360deg); } }
+          @keyframes faceIdPop { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        `}</style>
+      </div>
+    </div>
+  )
 }
