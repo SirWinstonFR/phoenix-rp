@@ -13,7 +13,7 @@ export default function BankScreen({ onBack, onOpenApp }) {
   const [faceIdPassed, setFaceIdPassed] = useState(false)
   const [showCardView, setShowCardView] = useState(false)
   const [showChartView, setShowChartView] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
+  const [expenseSearch, setExpenseSearch] = useState('')
   const [view, setView]           = useState('home') // 'home' | 'send' | 'savings' | 'mj-panel' | 'request' | 'receive'
   const [transactions, setTransactions] = useState([])
   const [loading, setLoading]     = useState(true)
@@ -861,8 +861,8 @@ export default function BankScreen({ onBack, onOpenApp }) {
           }}>
             <span style={{ fontSize: 12, color: 'var(--t3)', flexShrink: 0 }}>🔍</span>
             <input
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
+              value={expenseSearch}
+              onChange={e => setExpenseSearch(e.target.value)}
               placeholder="Rechercher une dépense"
               style={{
                 flex: 1, minWidth: 0, background: 'none', border: 'none', outline: 'none',
@@ -1093,8 +1093,8 @@ export default function BankScreen({ onBack, onOpenApp }) {
                 if (historyFilter === 'sent' ? !isSender : isSender) return false
                 return true
               }).filter(t => {
-                if (!searchQuery.trim()) return true
-                const q = searchQuery.trim().toLowerCase()
+                if (!expenseSearch.trim()) return true
+                const q = expenseSearch.trim().toLowerCase()
                 const otherName = (t.from_user_id === profile.id ? t.toProfile : t.fromProfile)?.username ?? ''
                 return (t.note ?? '').toLowerCase().includes(q) || otherName.toLowerCase().includes(q)
               })
