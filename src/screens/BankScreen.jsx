@@ -1003,7 +1003,7 @@ export default function BankScreen({ onBack, onOpenApp }) {
           )}
 
           {/* ACTIONS — simplifiées, un seul ton */}
-          <div style={{ display: 'flex', gap: 10, padding: '0 20px 20px', overflowX: 'auto', scrollbarWidth: 'none' }}>
+          <div style={{ display: 'flex', gap: 14, padding: '0 20px 20px', overflowX: 'auto', scrollbarWidth: 'none' }}>
             {[
               { img: '/envoyer.png',  label: 'Envoyer',  action: () => setView('send') },
               { img: '/recevoir.png', label: 'Recevoir', action: () => setView('receive') },
@@ -1011,23 +1011,14 @@ export default function BankScreen({ onBack, onOpenApp }) {
               { img: '/epargne.png',  label: 'Épargne',  action: () => setView('savings') },
               { img: '/bourse.png',   label: 'Bourse',   action: () => setView('invest') },
             ].map(a => (
-              <button key={a.label} onClick={a.action} style={{
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7,
-                background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                flexShrink: 0, width: 56,
-              }}>
-                <div style={{
-                  width: 48, height: 48, borderRadius: '50%',
-                  background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  overflow: 'hidden', transition: 'background 0.15s',
-                }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
-                >
-                  <img src={a.img} alt={a.label} style={{ width: '60%', height: '60%', objectFit: 'contain' }} />
-                </div>
-                <span style={{ fontSize: 11, color: 'var(--t2)', fontWeight: 600 }}>{a.label}</span>
+              <button key={a.label} onClick={a.action} title={a.label} style={{
+                background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                flexShrink: 0, transition: 'transform 0.15s',
+              }}
+                onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.08)'}
+                onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+              >
+                <img src={a.img} alt={a.label} style={{ width: 48, height: 48, objectFit: 'contain' }} />
               </button>
             ))}
           </div>
