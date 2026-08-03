@@ -41,12 +41,9 @@ body {
   width: 340px;
   height: 700px;
   box-sizing: border-box;
+  padding: 49px 19px 17px 19px;
   background: var(--phone-bg, var(--bg));
-  border-style: solid;
-  border-width: 49px 19px 17px 19px;
-  border-image-source: url('/phone-frame.png');
-  border-image-slice: 7.02% 5.72% 2.4% 5.67%;
-  border-image-repeat: stretch;
+  background-clip: padding-box;
   box-shadow:
     0 40px 100px rgba(0,0,0,0.95),
     0 0 80px var(--phone-glow, rgba(185,110,255,0.07));
@@ -56,9 +53,14 @@ body {
   position: relative;
 }
 
-/* L'encoche vient désormais directement de l'image du cadre — plus besoin de la dessiner */
+/* Le cadre du téléphone — vraie image, superposée par-dessus le contenu */
 .phone::before {
-  display: none;
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url('/phone-frame.png') center / 100% 100% no-repeat;
+  pointer-events: none;
+  z-index: 250;
 }
 
 /* Reflet latéral */
