@@ -42,6 +42,7 @@ body {
   height: 685px;
   box-sizing: border-box;
   padding: 48px 19px 16px 19px;
+  border-radius: 48px;
   background: var(--phone-bg, var(--bg));
   background-clip: padding-box;
   box-shadow:
