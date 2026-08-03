@@ -1005,11 +1005,11 @@ export default function BankScreen({ onBack, onOpenApp }) {
           {/* ACTIONS — simplifiées, un seul ton */}
           <div style={{ display: 'flex', gap: 10, padding: '0 20px 20px', overflowX: 'auto', scrollbarWidth: 'none' }}>
             {[
-              { icon: '↗️', label: 'Envoyer',  action: () => setView('send') },
-              { icon: '📷', label: 'Recevoir', action: () => setView('receive') },
-              { icon: '🙋', label: 'Demander', action: () => setView('request') },
-              { icon: '🏦', label: 'Épargne',  action: () => setView('savings') },
-              { icon: '📊', label: 'Bourse',   action: () => setView('invest') },
+              { img: '/envoyer.png',  label: 'Envoyer',  action: () => setView('send') },
+              { img: '/recevoir.png', label: 'Recevoir', action: () => setView('receive') },
+              { img: '/demander.png', label: 'Demander', action: () => setView('request') },
+              { img: '/epargne.png',  label: 'Épargne',  action: () => setView('savings') },
+              { img: '/bourse.png',   label: 'Bourse',   action: () => setView('invest') },
             ].map(a => (
               <button key={a.label} onClick={a.action} style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7,
@@ -1020,11 +1020,13 @@ export default function BankScreen({ onBack, onOpenApp }) {
                   width: 48, height: 48, borderRadius: '50%',
                   background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 18, transition: 'background 0.15s',
+                  overflow: 'hidden', transition: 'background 0.15s',
                 }}
                   onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
-                >{a.icon}</div>
+                >
+                  <img src={a.img} alt={a.label} style={{ width: '60%', height: '60%', objectFit: 'contain' }} />
+                </div>
                 <span style={{ fontSize: 11, color: 'var(--t2)', fontWeight: 600 }}>{a.label}</span>
               </button>
             ))}
