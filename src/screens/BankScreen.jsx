@@ -1018,7 +1018,7 @@ export default function BankScreen({ onBack, onOpenApp }) {
                 onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.08)'}
                 onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
               >
-                <img src={a.img} alt={a.label} style={{ width: 48, height: 48, objectFit: 'contain' }} />
+                <img src={a.img} alt={a.label} style={{ width: 68, height: 68, objectFit: 'contain' }} />
               </button>
             ))}
           </div>
