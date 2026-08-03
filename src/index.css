@@ -39,9 +39,9 @@ body {
 /* ── TÉLÉPHONE ── */
 .phone {
   width: 340px;
-  height: 700px;
+  height: 685px;
   box-sizing: border-box;
-  padding: 49px 19px 17px 19px;
+  padding: 48px 19px 16px 19px;
   background: var(--phone-bg, var(--bg));
   background-clip: padding-box;
   box-shadow:
